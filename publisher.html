@@ -16,11 +16,26 @@
                 <a href="endpoint.html" class="view-link">Endpoint View</a>
             </div>
             <div class="last-updated" id="lastUpdated"></div>
+            <div class="file-inputs">
+                <div>
+                    <label for="dataFile">Upload Data CSV:</label>
+                    <input type="file" id="dataFile" accept=".csv" class="file-input">
+                </div>
+                <div class="sellers-json-section">
+                    <button id="fetchSellersJson" class="fetch-button">Fetch Sellers.json</button>
+                    <div id="progressContainer" class="progress-container" style="display: none;">
+                        <div id="progressBar" class="progress-bar"></div>
+                        <div id="progressText" class="progress-text">Loading...</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <select id="publisherSelect" onchange="updateDisplay()">
             <option value="">Select a Publisher</option>
         </select>
+        
+        <input type="text" id="searchBox" class="search-box" placeholder="Search bidders..." onkeyup="filterBidders()">
         
         <div id="bidderList"></div>
     </div>
@@ -442,6 +457,25 @@
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             });
         });
+
+        // Add the fetchSellersJson function (same as above)
+        async function fetchSellersJson() {
+            // ... (same as endpoint.html) ...
+        }
+
+        // Add click handler for the fetch button
+        document.getElementById('fetchSellersJson').addEventListener('click', fetchSellersJson);
+
+        // Add search functionality for publisher.html
+        function filterBidders() {
+            const searchText = document.getElementById('searchBox').value.toLowerCase();
+            const bidderGroups = document.getElementsByClassName('publisher-group');
+            
+            Array.from(bidderGroups).forEach(group => {
+                const text = group.textContent.toLowerCase();
+                group.style.display = text.includes(searchText) ? '' : 'none';
+            });
+        }
     </script>
 </body>
 </html>

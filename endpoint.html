@@ -16,6 +16,19 @@
                 <a href="endpoint.html" class="view-link">Endpoint View</a>
             </div>
             <div class="last-updated" id="lastUpdated"></div>
+            <div class="file-inputs">
+                <div>
+                    <label for="dataFile">Upload Data CSV:</label>
+                    <input type="file" id="dataFile" accept=".csv" class="file-input">
+                </div>
+                <div class="sellers-json-section">
+                    <button id="fetchSellersJson" class="fetch-button">Fetch Sellers.json</button>
+                    <div id="progressContainer" class="progress-container" style="display: none;">
+                        <div id="progressBar" class="progress-bar"></div>
+                        <div id="progressText" class="progress-text">Loading...</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <select id="bidderSelect" onchange="updateDisplay()">
@@ -196,6 +209,63 @@
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             });
         });
+
+        // Add the fetchSellersJson function
+        async function fetchSellersJson() {
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const fetchButton = document.getElementById('fetchSellersJson');
+
+            try {
+                progressContainer.style.display = 'block';
+                fetchButton.disabled = true;
+                progressBar.style.width = '0%';
+                progressText.textContent = 'Fetching sellers.json...';
+
+                const response = await fetch('https://api.allorigins.win/raw?url=https://lijit.com/sellers.json');
+                
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                progressBar.style.width = '50%';
+                progressText.textContent = 'Parsing data...';
+
+                const data = await response.json();
+                
+                progressBar.style.width = '75%';
+                progressText.textContent = 'Processing sellers...';
+
+                sellersData = data.sellers.reduce((acc, seller) => {
+                    acc[seller.seller_id] = seller;
+                    return acc;
+                }, {});
+
+                progressBar.style.width = '100%';
+                progressText.textContent = 'Complete!';
+
+                localStorage.setItem('sellersData', JSON.stringify(sellersData));
+
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                    fetchButton.disabled = false;
+                    alert('Sellers.json data loaded successfully!');
+                }, 1000);
+
+                console.log('Sellers.json loaded:', Object.keys(sellersData).length, 'sellers');
+                
+            } catch (error) {
+                console.error('Error fetching sellers.json:', error);
+                progressText.textContent = 'Error loading data';
+                progressBar.style.backgroundColor = '#ff4444';
+                fetchButton.disabled = false;
+                alert('Error loading sellers.json. Please try again.');
+            }
+        }
+
+        // Add click handler for the fetch button
+        document.getElementById('fetchSellersJson').addEventListener('click', fetchSellersJson);
     </script>
 </body>
 </html>

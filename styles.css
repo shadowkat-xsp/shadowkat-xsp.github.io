@@ -356,3 +356,49 @@
 .scroll-top.visible {
     opacity: 1;
 }
+
+/* ==========================================================================
+   Sellers JSON Section
+   ========================================================================== */
+.sellers-json-section {
+    margin: 10px 0;
+}
+
+.fetch-button {
+    padding: 8px 16px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.fetch-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.progress-container {
+    margin-top: 10px;
+    width: 100%;
+    background-color: #f0f0f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    width: 0;
+    height: 20px;
+    background-color: #4CAF50;
+    transition: width 0.3s ease-in-out;
+}
+
+.progress-text {
+    text-align: center;
+    margin-top: 5px;
+    font-size: 14px;
+    color: #666;
+}
+
+/* Note: Search box styles already exist in the file */

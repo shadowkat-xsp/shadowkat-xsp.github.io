@@ -36,6 +36,8 @@
             <option value="">Select a Bidder</option>
         </select>
 
+        <input type="text" id="searchBox" class="search-box" placeholder="Search publishers..." onkeyup="filterPublishers()">
+
         <div id="publisherList"></div>
     </div>
 
@@ -97,28 +99,28 @@
                     throw new Error('Network response was not ok');
                 }
 
-                // Simulate progress updates
-                let progress = 0;
-                const progressInterval = setInterval(() => {
-                    progress += 5;
-                    if (progress <= 90) {
-                        progressBar.style.width = `${progress}%`;
-                        progressText.textContent = `Loading... ${progress}%`;
-                    }
-                }, 100);
+                // Update progress to show we've started receiving data
+                progressBar.style.width = '50%';
+                progressText.textContent = 'Parsing data...';
 
                 const data = await response.json();
-                clearInterval(progressInterval);
                 
-                // Complete the progress bar
-                progressBar.style.width = '100%';
-                progressText.textContent = 'Complete!';
+                // Update progress to show we've parsed the JSON
+                progressBar.style.width = '75%';
+                progressText.textContent = 'Processing sellers...';
 
                 // Process the sellers data
                 sellersData = data.sellers.reduce((acc, seller) => {
                     acc[seller.seller_id] = seller;
                     return acc;
                 }, {});
+
+                // Complete the progress bar
+                progressBar.style.width = '100%';
+                progressText.textContent = 'Complete!';
+
+                // Store in localStorage for persistence
+                localStorage.setItem('sellersData', JSON.stringify(sellersData));
 
                 // Update the UI to show success
                 setTimeout(() => {
@@ -335,6 +337,16 @@
             }
         }
 
+        function filterPublishers() {
+            const searchText = document.getElementById('searchBox').value.toLowerCase();
+            const publisherGroups = document.getElementsByClassName('publisher-group');
+            
+            Array.from(publisherGroups).forEach(group => {
+                const text = group.textContent.toLowerCase();
+                group.style.display = text.includes(searchText) ? '' : 'none';
+            });
+        }
+
         // Scroll-to-top functionality
         document.addEventListener('DOMContentLoaded', function() {
             const scrollButton = document.getElementById('scrollTop');
@@ -353,48 +365,5 @@
             });
         });
     </script>
-
-    <style>
-        .sellers-json-section {
-            margin: 10px 0;
-        }
-
-        .fetch-button {
-            padding: 8px 16px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .fetch-button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-
-        .progress-container {
-            margin-top: 10px;
-            width: 100%;
-            background-color: #f0f0f0;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        .progress-bar {
-            width: 0;
-            height: 20px;
-            background-color: #4CAF50;
-            transition: width 0.3s ease-in-out;
-        }
-
-        .progress-text {
-            text-align: center;
-            margin-top: 5px;
-            font-size: 14px;
-            color: #666;
-        }
-    </style>
 </body>
 </html>
