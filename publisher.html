@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XSP Alignment Helper - Publisher View</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header-section">
+            <h1>XSP Alignment Helper</h1>
+            <div class="view-switcher">
+                <a href="index.html" class="view-link">Bidder View</a>
+                <a href="publisher.html" class="view-link">Publisher View</a>
+                <a href="endpoint.html" class="view-link">Endpoint View</a>
+            </div>
+            <div class="last-updated" id="lastUpdated"></div>
+        </div>
+
+        <select id="publisherSelect" onchange="updateDisplay()">
+            <option value="">Select a Publisher</option>
+        </select>
+        
+        <div id="bidderList"></div>
+    </div>
+
+    <a href="#" class="scroll-top" id="scrollTop">↑</a>
+
+    <script>
+        let globalData = [];
+        let sellersData = {};
+        let lastUpdateDate = '';
+        
+        // Direct JSON object instead of loading from file
+        const bidderRequirements = {
+            "Beeswax": {
+                "demandApproval": false,
+                "appsTxt": false,
+                "ctv": true,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": false,
+                "notes": "Bidder uses utilization rate (impressions/requests) to determine performance."
+            },
+            "BidSwitch": {
+                "demandApproval": false,
+                "appsTxt": false,
+                "ctv": true,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": false,
+                "notes": ""
+            },
+            "BoldWin": {
+                "demandApproval": true,
+                "appsTxt": false,
+                "ctv": false,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": false,
+                "notes": "Direct Inventory Only"
+            },
+            "Centro": {
+                "demandApproval": false,
+                "appsTxt": false,
+                "ctv": true,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": false,
+                "notes": "Limited QPS"
+            },
+            "DV360": {
+                "demandApproval": false,
+                "appsTxt": false,
+                "ctv": true,
+                "app": false,
+                "sellersJson": false,
+                "bundleSubmission": false,
+                "notes": "Limited QPS"
+            },
+            "Edge226": {
+                "demandApproval": false,
+                "appsTxt": false,
+                "ctv": true,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": false,
+                "notes": ""
+            },
+            "Epom Services": {
+                "demandApproval": false,
+                "appsTxt": false,
+                "ctv": true,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": false,
+                "notes": ""
+            },
+            "Epsilon": {
+                "demandApproval": true,
+                "appsTxt": true,
+                "ctv": true,
+                "app": false,
+                "sellersJson": true,
+                "bundleSubmission": true,
+                "notes": ""
+            },
+            "Equativ": {
+                "demandApproval": true,
+                "appsTxt": true,
+                "ctv": true,
+                "app": true,
+                "sellersJson": true,
+                "bundleSubmission": true,
+                "notes": ""
+            },
+            "Illumin": {
+                "demandApproval": true,
+                "appsTxt": true,
+                "ctv": true,
+                "app": false,
+                "sellersJson": true,
+                "bundleSubmission": false,
+                "notes": "Will only buy Direct O&O"
+            },
+            "InMobi": {
+                "demandApproval": true,
+                "appsTxt": false,
+                "ctv": false,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": true,
+                "notes": ""
+            },
+            "Krush Media": {
+                "demandApproval": false,
+                "appsTxt": true,
+                "ctv": true,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": false,
+                "notes": "Sensitive to IVT and discrepancies"
+            },
+            "Madhive": {
+                "demandApproval": true,
+                "appsTxt": false,
+                "ctv": true,
+                "app": true,
+                "sellersJson": true,
+                "bundleSubmission": false,
+                "notes": "Sensitive to IVT"
+            },
+            "Magnite": {
+                "demandApproval": true,
+                "appsTxt": true,
+                "ctv": false,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": true,
+                "notes": ""
+            },
+            "Motorik": {
+                "demandApproval": false,
+                "appsTxt": false,
+                "ctv": false,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": false,
+                "notes": ""
+            },
+            "OpenX": {
+                "demandApproval": true,
+                "appsTxt": true,
+                "ctv": false,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": true,
+                "notes": ""
+            },
+            "Opera Bidder": {
+                "demandApproval": false,
+                "appsTxt": false,
+                "ctv": true,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": false,
+                "notes": ""
+            },
+            "PubMatic": {
+                "demandApproval": true,
+                "appsTxt": true,
+                "ctv": true,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": true,
+                "notes": ""
+            },
+            "PubMatic UK": {
+                "demandApproval": true,
+                "appsTxt": true,
+                "ctv": true,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": true,
+                "notes": ""
+            },
+            "PulsePoint": {
+                "demandApproval": true,
+                "appsTxt": true,
+                "ctv": false,
+                "app": true,
+                "sellersJson": true,
+                "bundleSubmission": false,
+                "notes": ""
+            },
+            "Quantcast": {
+                "demandApproval": false,
+                "appsTxt": false,
+                "ctv": true,
+                "app": false,
+                "sellersJson": false,
+                "bundleSubmission": false,
+                "notes": "Sending mininal traffic/qps at their request"
+            },
+            "RTB House": {
+                "demandApproval": false,
+                "appsTxt": false,
+                "ctv": true,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": false,
+                "notes": ""
+            },
+            "Simpli.fi": {
+                "demandApproval": true,
+                "appsTxt": false,
+                "ctv": true,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": false,
+                "notes": "Moved to an allowlist for CTV - bidder must approve all new bundles"
+            },
+            "TaurusX": {
+                "demandApproval": false,
+                "appsTxt": false,
+                "ctv": false,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": true,
+                "notes": ""
+            },
+            "The Trade Desk": {
+                "demandApproval": true,
+                "appsTxt": false,
+                "ctv": true,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": true,
+                "notes": ""
+            },
+            "UnrulyX": {
+                "demandApproval": false,
+                "appsTxt": false,
+                "ctv": false,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": false,
+                "notes": ""
+            },
+            "Xandr": {
+                "demandApproval": false,
+                "appsTxt": false,
+                "ctv": false,
+                "app": true,
+                "sellersJson": false,
+                "bundleSubmission": false,
+                "notes": ""
+            }
+        };
+
+        // Load data from localStorage when page loads
+        window.addEventListener('load', function() {
+            const savedData = localStorage.getItem('dashboardData');
+            const savedSellers = localStorage.getItem('sellersData');
+            const savedDate = localStorage.getItem('lastUpdateDate');
+            
+            if (savedData && savedSellers) {
+                globalData = JSON.parse(savedData);
+                sellersData = JSON.parse(savedSellers);
+                lastUpdateDate = savedDate;
+                
+                document.getElementById('lastUpdated').textContent = 
+                    `Last Updated: ${formatDate(lastUpdateDate)}`;
+                updateDropdown();
+            }
+        });
+
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function findSellerInfo(pub_id) {
+            return sellersData[pub_id] || null;
+        }
+
+        function updateDropdown() {
+            const publishers = [...new Set(globalData
+                .filter(entry => entry.auctions && parseInt(entry.auctions) > 0)
+                .map(entry => entry.pub_name))];
+            
+            const publisherSelect = document.getElementById('publisherSelect');
+            publisherSelect.innerHTML = '<option value="">Select a Publisher</option>';
+            publishers.sort().forEach(publisher => {
+                if (publisher) {
+                    publisherSelect.innerHTML += `<option value="${publisher}">${publisher}</option>`;
+                }
+            });
+        }
+
+        function getBidderRequirementsHtml(bidderName) {
+            const bidderInfo = bidderRequirements[bidderName];
+            if (!bidderInfo) return '';
+
+            return `
+                <div class="bidder-notes">
+                    <div class="requirements-grid">
+                        <div class="requirement-item ${bidderInfo.demandApproval ? '' : 'negative'}">
+                            <i>●</i> Approval: ${bidderInfo.demandApproval ? 'Required' : 'Not Required'}
+                        </div>
+                        <div class="requirement-item ${bidderInfo.appsTxt ? '' : 'negative'}">
+                            <i>●</i> Apps.txt: ${bidderInfo.appsTxt ? 'Yes' : 'No'}
+                        </div>
+                        <div class="requirement-item ${bidderInfo.ctv ? '' : 'negative'}">
+                            <i>●</i> CTV: ${bidderInfo.ctv ? 'Yes' : 'No'}
+                        </div>
+                        <div class="requirement-item ${bidderInfo.app ? '' : 'negative'}">
+                            <i>●</i> App: ${bidderInfo.app ? 'Yes' : 'No'}
+                        </div>
+                        <div class="requirement-item ${bidderInfo.sellersJson ? '' : 'negative'}">
+                            <i>●</i> Sellers.JSON: ${bidderInfo.sellersJson ? 'Yes' : 'No'}
+                        </div>
+                        <div class="requirement-item ${bidderInfo.bundleSubmission ? '' : 'negative'}">
+                            <i>●</i> Bundle Submit: ${bidderInfo.bundleSubmission ? 'Required' : 'Not Required'}
+                        </div>
+                    </div>
+                    ${bidderInfo.notes ? `<div class="notes-section">Notes: ${bidderInfo.notes}</div>` : ''}
+                </div>
+            `;
+        }
+
+        function updateDisplay() {
+            const selectedPublisher = document.getElementById('publisherSelect').value;
+            const bidderList = document.getElementById('bidderList');
+            bidderList.innerHTML = '';
+            
+            if (!selectedPublisher) return;
+            
+            const publisherData = globalData.filter(entry => 
+                entry.pub_name === selectedPublisher && 
+                entry.auctions && 
+                parseInt(entry.auctions) > 0
+            );
+            
+            // Get publisher info from first matching record
+            const publisherInfo = publisherData[0];
+            const sellerInfo = findSellerInfo(publisherInfo.pub_id);
+            
+            // Display publisher header info
+            bidderList.innerHTML = `
+                <div class="publisher-group">
+                    <div class="publisher-header">
+                        <h3 class="publisher-name">${selectedPublisher}</h3>
+                        <div class="publisher-info">
+                            <span class="seller-label">ID:</span> ${publisherInfo.pub_id}
+                            <span class="seller-label" style="margin-left: 20px;">Type:</span> ${publisherInfo.pub_type}
+                        </div>
+                        ${sellerInfo ? `
+                            <div class="seller-info">
+                                <div><span class="seller-label">Classification:</span> ${sellerInfo.seller_type}</div>
+                                ${sellerInfo.name ? `<div><span class="seller-label">Name:</span> ${sellerInfo.name}</div>` : ''}
+                                ${sellerInfo.domain ? `<div><span class="seller-label">Domain:</span> ${sellerInfo.domain}</div>` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+
+            // Group by bidder
+            const bidderGroups = {};
+            publisherData.forEach(entry => {
+                const key = entry.bidder_name;
+                if (!bidderGroups[key]) {
+                    bidderGroups[key] = {
+                        device_types: new Set()
+                    };
+                }
+                bidderGroups[key].device_types.add(entry.device_type);
+            });
+            
+            // Display bidder information
+            Object.entries(bidderGroups)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .forEach(([bidderName, data]) => {
+                    bidderList.innerHTML += `
+                        <div class="publisher-group">
+                            <div class="publisher-header">
+                                <h3 class="publisher-name">${bidderName}</h3>
+                                ${getBidderRequirementsHtml(bidderName)}
+                                <div class="device-types">
+                                    ${Array.from(data.device_types)
+                                        .sort()
+                                        .map(device => `<span class="device-type">${device}</span>`)
+                                        .join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+        }
+
+        // Add scroll-to-top functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const scrollButton = document.getElementById('scrollTop');
+            
+            window.addEventListener('scroll', function() {
+                if (window.pageYOffset > 300) {
+                    scrollButton.classList.add('visible');
+                } else {
+                    scrollButton.classList.remove('visible');
+                }
+            });
+
+            scrollButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html>
