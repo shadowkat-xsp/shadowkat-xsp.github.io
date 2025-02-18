@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XSP Alignment Helper - Opportunities</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header-section">
+            <h1><a href="index.html" style="text-decoration: none; color: inherit;">XSP Alignment Helper</a></h1>
+            <div class="view-switcher">
+                <a href="index.html" class="view-link">Bidder View</a>
+                <a href="publisher.html" class="view-link">Publisher View</a>
+                <a href="endpoint.html" class="view-link">Endpoint View</a>
+                <a href="opportunities.html" class="view-link active">Opportunities</a>
+            </div>
+            <div class="last-updated" id="lastUpdated"></div>
+        </div>
+
+        <select id="bidderSelect" onchange="updateDisplay()">
+            <option value="">Select a Bidder</option>
+        </select>
+
+        <input type="text" id="searchBox" class="search-box" placeholder="Search publishers..." onkeyup="filterPublishers()">
+        
+        <div id="opportunitiesList"></div>
+    </div>
+
+    <a href="#" class="scroll-top" id="scrollTop">↑</a>
+
+    <script>
+        let globalData = [];
+        let sellersData = {};
+        let lastUpdateDate = '';
+
+        // Load saved data when page loads
+        window.addEventListener('load', function() {
+            const savedData = localStorage.getItem('dashboardData');
+            const savedSellers = localStorage.getItem('sellersData');
+            const savedDate = localStorage.getItem('lastUpdateDate');
+            
+            if (savedData && savedSellers) {
+                globalData = JSON.parse(savedData);
+                sellersData = JSON.parse(savedSellers);
+                lastUpdateDate = savedDate;
+                
+                document.getElementById('lastUpdated').textContent = 
+                    `Last Updated: ${formatDate(lastUpdateDate)}`;
+                updateDropdown();
+            }
+        });
+
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function updateDropdown() {
+            const bidders = [...new Set(globalData
+                .filter(entry => entry.bidder_name)
+                .map(entry => entry.bidder_name))];
+            
+            const bidderSelect = document.getElementById('bidderSelect');
+            bidderSelect.innerHTML = '<option value="">Select a Bidder</option>';
+            bidders.sort().forEach(bidder => {
+                if (bidder) {
+                    bidderSelect.innerHTML += `<option value="${bidder}">${bidder}</option>`;
+                }
+            });
+        }
+
+        function updateDisplay() {
+            const selectedBidder = document.getElementById('bidderSelect').value;
+            const opportunitiesList = document.getElementById('opportunitiesList');
+            opportunitiesList.innerHTML = '';
+            
+            if (!selectedBidder) return;
+
+            // Get all unique publishers and their details
+            const allPublishers = new Map();
+            globalData.forEach(entry => {
+                if (entry.pub_name && entry.pub_id) {
+                    const key = `${entry.pub_name}|${entry.pub_id}`;
+                    if (!allPublishers.has(key)) {
+                        allPublishers.set(key, {
+                            name: entry.pub_name,
+                            id: entry.pub_id,
+                            pub_type: entry.pub_type || 'Unknown',
+                            device_types: new Set(),
+                            alignedBidders: new Set()
+                        });
+                    }
+                    if (entry.device_type) {
+                        allPublishers.get(key).device_types.add(entry.device_type);
+                    }
+                    if (entry.bidder_name) {
+                        allPublishers.get(key).alignedBidders.add(entry.bidder_name);
+                    }
+                }
+            });
+
+            // Filter for unaligned publishers
+            const unalignedPublishers = Array.from(allPublishers.values())
+                .filter(pub => !pub.alignedBidders.has(selectedBidder))
+                .sort((a, b) => a.name.localeCompare(b.name));
+
+            // Display header with count
+            opportunitiesList.innerHTML = `
+                <div class="opportunities-header">
+                    <h2>Unaligned Publishers for ${selectedBidder}</h2>
+                    <div class="opportunity-count">${unalignedPublishers.length} potential opportunities</div>
+                </div>
+            `;
+
+            // Display unaligned publishers
+            unalignedPublishers.forEach(pub => {
+                const sellerInfo = findSellerInfo(pub.id);
+                
+                const publisherDiv = document.createElement('div');
+                publisherDiv.className = 'opportunity-item';
+                publisherDiv.innerHTML = `
+                    <div class="publisher-header">
+                        <h3 class="publisher-name">${pub.name}</h3>
+                        <div class="publisher-info">
+                            <span class="seller-label">ID:</span> ${pub.id}
+                            <span class="seller-label" style="margin-left: 20px;">Type:</span> ${pub.pub_type}
+                        </div>
+                        ${sellerInfo ? `
+                            <div class="seller-info">
+                                <div><span class="seller-label">Classification:</span> ${sellerInfo.seller_type}</div>
+                                ${sellerInfo.name ? `<div><span class="seller-label">Name:</span> ${sellerInfo.name}</div>` : ''}
+                                ${sellerInfo.domain ? `<div><span class="seller-label">Domain:</span> ${sellerInfo.domain}</div>` : ''}
+                            </div>
+                        ` : ''}
+                        <div class="device-types">
+                            ${Array.from(pub.device_types)
+                                .sort()
+                                .map(device => `<span class="device-type">${device}</span>`)
+                                .join('')}
+                        </div>
+                        <div class="aligned-with">
+                            <span class="seller-label">Currently aligned with:</span>
+                            ${Array.from(pub.alignedBidders)
+                                .sort()
+                                .map(bidder => `<span class="aligned-bidder">${bidder}</span>`)
+                                .join(', ')}
+                        </div>
+                    </div>
+                `;
+                opportunitiesList.appendChild(publisherDiv);
+            });
+        }
+
+        function filterPublishers() {
+            const searchText = document.getElementById('searchBox').value.toLowerCase();
+            const opportunityItems = document.getElementsByClassName('opportunity-item');
+            
+            Array.from(opportunityItems).forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(searchText) ? '' : 'none';
+            });
+        }
+
+        // Scroll-to-top functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const scrollButton = document.getElementById('scrollTop');
+            
+            window.addEventListener('scroll', function() {
+                if (window.pageYOffset > 300) {
+                    scrollButton.classList.add('visible');
+                } else {
+                    scrollButton.classList.remove('visible');
+                }
+            });
+
+            scrollButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html> 

@@ -35,18 +35,29 @@
     font-size: 14px;
 }
 
+.view-switcher {
+    display: flex;
+    gap: 10px;
+    margin: 15px 0;
+}
+
 .view-link {
-    display: inline-block;
-    padding: 8px 16px;
-    background-color: #3498db;
-    color: white;
-    text-decoration: none;
+    padding: 8px 15px;
+    background-color: #f0f0f0;
     border-radius: 4px;
-    margin-left: 20px;
+    text-decoration: none;
+    color: #333;
+    font-size: 14px;
+    transition: background-color 0.2s;
 }
 
 .view-link:hover {
-    background-color: #2980b9;
+    background-color: #e0e0e0;
+}
+
+.view-link.active {
+    background-color: #007bff;
+    color: white;
 }
 
 /* ==========================================================================
@@ -402,3 +413,41 @@
 }
 
 /* Note: Search box styles already exist in the file */
+
+/* Opportunities View Styles */
+.opportunities-header {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.opportunity-count {
+    color: #666;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+.opportunity-item {
+    margin: 15px 0;
+    padding: 15px;
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.aligned-with {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #666;
+    padding: 8px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.aligned-bidder {
+    color: #0277bd;
+    font-style: italic;
+}
