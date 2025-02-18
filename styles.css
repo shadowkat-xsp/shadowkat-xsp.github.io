@@ -451,3 +451,26 @@
     color: #0277bd;
     font-style: italic;
 }
+
+.device-types-section {
+    margin: 15px 0;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.current-device-types,
+.potential-device-types {
+    margin: 10px 0;
+}
+
+.device-type.potential {
+    background-color: #fff3e0;
+    color: #e65100;
+}
+
+.current-device-types .seller-label,
+.potential-device-types .seller-label {
+    display: block;
+    margin-bottom: 5px;
+}

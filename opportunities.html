@@ -94,11 +94,18 @@
                             id: entry.pub_id,
                             pub_type: entry.pub_type || 'Unknown',
                             device_types: new Set(),
-                            alignedBidders: new Set()
+                            alignedBidders: new Set(),
+                            potential_device_types: new Set()
                         });
                     }
                     if (entry.device_type) {
+                        // Track actual device types for this publisher
                         allPublishers.get(key).device_types.add(entry.device_type);
+                        
+                        // Track all potential device types this publisher could support
+                        if (entry.bidder_name !== selectedBidder) {
+                            allPublishers.get(key).potential_device_types.add(entry.device_type);
+                        }
                     }
                     if (entry.bidder_name) {
                         allPublishers.get(key).alignedBidders.add(entry.bidder_name);
@@ -139,11 +146,25 @@
                                 ${sellerInfo.domain ? `<div><span class="seller-label">Domain:</span> ${sellerInfo.domain}</div>` : ''}
                             </div>
                         ` : ''}
-                        <div class="device-types">
-                            ${Array.from(pub.device_types)
-                                .sort()
-                                .map(device => `<span class="device-type">${device}</span>`)
-                                .join('')}
+                        <div class="device-types-section">
+                            <div class="current-device-types">
+                                <span class="seller-label">Current Device Types:</span>
+                                <div class="device-types">
+                                    ${Array.from(pub.device_types)
+                                        .sort()
+                                        .map(device => `<span class="device-type">${device}</span>`)
+                                        .join('')}
+                                </div>
+                            </div>
+                            <div class="potential-device-types">
+                                <span class="seller-label">Potential Device Types:</span>
+                                <div class="device-types">
+                                    ${Array.from(pub.potential_device_types)
+                                        .sort()
+                                        .map(device => `<span class="device-type potential">${device}</span>`)
+                                        .join('')}
+                                </div>
+                            </div>
                         </div>
                         <div class="aligned-with">
                             <span class="seller-label">Currently aligned with:</span>
