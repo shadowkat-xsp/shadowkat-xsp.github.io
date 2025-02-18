@@ -83,6 +83,13 @@
             
             if (!selectedBidder) return;
 
+            // Get device types supported by the selected bidder
+            const bidderDeviceTypes = new Set(
+                globalData
+                    .filter(entry => entry.bidder_name === selectedBidder)
+                    .map(entry => entry.device_type)
+            );
+
             // Get all unique publishers and their details
             const allPublishers = new Map();
             globalData.forEach(entry => {
@@ -95,17 +102,11 @@
                             pub_type: entry.pub_type || 'Unknown',
                             device_types: new Set(),
                             alignedBidders: new Set(),
-                            potential_device_types: new Set()
                         });
                     }
                     if (entry.device_type) {
                         // Track actual device types for this publisher
                         allPublishers.get(key).device_types.add(entry.device_type);
-                        
-                        // Track all potential device types this publisher could support
-                        if (entry.bidder_name !== selectedBidder) {
-                            allPublishers.get(key).potential_device_types.add(entry.device_type);
-                        }
                     }
                     if (entry.bidder_name) {
                         allPublishers.get(key).alignedBidders.add(entry.bidder_name);
@@ -118,41 +119,53 @@
                 .filter(pub => !pub.alignedBidders.has(selectedBidder))
                 .sort((a, b) => a.name.localeCompare(b.name));
 
-            // Display header with count
+            // Display header with count and bidder's device types
             opportunitiesList.innerHTML = `
                 <div class="opportunities-header">
                     <h2>Unaligned Publishers for ${selectedBidder}</h2>
-                    <div class="opportunity-count">${unalignedPublishers.length} potential opportunities</div>
+                    <div class="bidder-device-types">
+                        <span class="seller-label">Bidder Supported Device Types:</span>
+                        <div class="device-types">
+                            ${Array.from(bidderDeviceTypes)
+                                .sort()
+                                .map(device => `<span class="device-type bidder-supported">${device}</span>`)
+                                .join('')}
+                        </div>
+                    </div>
+                    <div class="opportunity-count">${unalignedPublishers.length} unaligned publishers</div>
                 </div>
                 <div class="opportunities-grid">
-                    ${unalignedPublishers.map(pub => `
+                    ${unalignedPublishers.map(pub => {
+                        // Check if publisher has matching device types with bidder
+                        const hasMatchingDeviceTypes = Array.from(pub.device_types)
+                            .some(deviceType => bidderDeviceTypes.has(deviceType));
+                        
+                        return `
                         <div class="opportunity-item">
                             <div class="publisher-header">
-                                <h3 class="publisher-name">${pub.name}</h3>
+                                <div class="publisher-header-row">
+                                    <h3 class="publisher-name">${pub.name}</h3>
+                                    ${hasMatchingDeviceTypes ? 
+                                        '<span class="compatibility-check">✓</span>' : ''}
+                                </div>
                                 <div class="publisher-info">
                                     <span class="seller-label">ID:</span> ${pub.id}
                                     <span class="seller-label" style="margin-left: 20px;">Type:</span> ${pub.pub_type}
                                 </div>
-                                <div class="device-types-section">
-                                    <div class="current-device-types">
-                                        <span class="seller-label">Current Device Types:</span>
-                                        <div class="device-types">
-                                            ${Array.from(pub.device_types)
-                                                .sort()
-                                                .map(device => `<span class="device-type">${device}</span>`)
-                                                .join('')}
-                                        </div>
-                                    </div>
-                                    <div class="potential-device-types">
-                                        <span class="seller-label">Potential Device Types:</span>
-                                        <div class="device-types">
-                                            ${Array.from(pub.potential_device_types)
-                                                .sort()
-                                                .map(device => `<span class="device-type potential">${device}</span>`)
-                                                .join('')}
-                                        </div>
+                                <div class="publisher-device-types">
+                                    <span class="seller-label">Supported Device Types:</span>
+                                    <div class="device-types">
+                                        ${Array.from(pub.device_types)
+                                            .sort()
+                                            .map(device => `
+                                                <span class="device-type ${bidderDeviceTypes.has(device) ? 'matching' : ''}">
+                                                    ${device}
+                                                </span>`)
+                                            .join('')}
                                     </div>
                                 </div>
+                            </div>
+                            <div class="publisher-info">
                                 <div class="aligned-with">
                                     <span class="seller-label">Currently aligned with:</span>
                                     ${Array.from(pub.alignedBidders)
@@ -162,7 +175,8 @@
                                 </div>
                             </div>
                         </div>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </div>
             `;
         }
