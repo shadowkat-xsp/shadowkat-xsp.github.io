@@ -176,7 +176,7 @@
                 progressBar.style.width = '0%';
                 progressText.textContent = 'Fetching sellers.json...';
 
-                // Use your own secure backend proxy instead
+                // Use local cached copy of sellers.json
                 const response = await fetch('/api/sellers-json');
                 
                 if (!response.ok) {
