@@ -397,13 +397,13 @@
 
         // Add encryption for sensitive data before storing
         function encryptData(data) {
-            // This is a simple example - in production use a proper encryption library
-            return btoa(JSON.stringify(data));
+            // Convert to UTF-8 safe base64
+            return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
         }
 
         function decryptData(encryptedData) {
-            // This is a simple example - in production use a proper encryption library
-            return JSON.parse(atob(encryptedData));
+            // Convert from UTF-8 safe base64
+            return JSON.parse(decodeURIComponent(escape(atob(encryptedData))));
         }
     </script>
 </body>

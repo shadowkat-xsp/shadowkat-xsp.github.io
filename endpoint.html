@@ -41,7 +41,6 @@
         let sellersData = {};
         let lastUpdateDate = '';
 
-        // Initialize all event listeners after DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
             // Load saved data
             const savedData = localStorage.getItem('dashboardData');
@@ -49,8 +48,8 @@
             const savedDate = localStorage.getItem('lastUpdateDate');
             
             if (savedData && savedSellers) {
-                globalData = JSON.parse(savedData);
-                sellersData = JSON.parse(savedSellers);
+                globalData = decryptData(savedData);
+                sellersData = decryptData(savedSellers);
                 lastUpdateDate = savedDate;
                 
                 const lastUpdatedElement = document.getElementById('lastUpdated');
