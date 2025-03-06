@@ -3,12 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Keep only CSP header -->
-    <meta http-equiv="Content-Security-Policy" 
-          content="default-src 'self'; 
-                   script-src 'self' 'unsafe-inline'; 
-                   style-src 'self' 'unsafe-inline';
-                   connect-src 'self' https://api.allorigins.win;">
     <title>XSP Alignment Helper - Publisher View</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -288,6 +282,23 @@
             }
         };
 
+        // Load data from localStorage when page loads
+        window.addEventListener('load', function() {
+            const savedData = localStorage.getItem('dashboardData');
+            const savedSellers = localStorage.getItem('sellersData');
+            const savedDate = localStorage.getItem('lastUpdateDate');
+            
+            if (savedData && savedSellers) {
+                globalData = JSON.parse(savedData);
+                sellersData = JSON.parse(savedSellers);
+                lastUpdateDate = savedDate;
+                
+                document.getElementById('lastUpdated').textContent = 
+                    `Last Updated: ${formatDate(lastUpdateDate)}`;
+                updateDropdown();
+            }
+        });
+
         function formatDate(dateStr) {
             if (!dateStr) return 'N/A';
             const date = new Date(dateStr);
@@ -315,23 +326,6 @@
                 }
             });
         }
-
-        // Load saved data when page loads
-        window.addEventListener('load', function() {
-            const savedData = localStorage.getItem('dashboardData');
-            const savedSellers = localStorage.getItem('sellersData');
-            const savedDate = localStorage.getItem('lastUpdateDate');
-            
-            if (savedData && savedSellers) {
-                globalData = decryptData(savedData);
-                sellersData = decryptData(savedSellers);
-                lastUpdateDate = savedDate;
-                
-                document.getElementById('lastUpdated').textContent = 
-                    `Last Updated: ${formatDate(lastUpdateDate)}`;
-                updateDropdown();
-            }
-        });
 
         function getBidderRequirementsHtml(bidderName) {
             const bidderInfo = bidderRequirements[bidderName];
@@ -364,7 +358,6 @@
             `;
         }
 
-        // Modify the updateDisplay function to use rate limiting
         function updateDisplay() {
             const selectedPublisher = document.getElementById('publisherSelect').value;
             const bidderList = document.getElementById('bidderList');
@@ -462,17 +455,6 @@
                 const text = group.textContent.toLowerCase();
                 group.style.display = text.includes(searchText) ? '' : 'none';
             });
-        }
-
-        // Add encryption/decryption functions
-        function encryptData(data) {
-            // Convert to UTF-8 safe base64
-            return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-        }
-
-        function decryptData(encryptedData) {
-            // Convert from UTF-8 safe base64
-            return JSON.parse(decodeURIComponent(escape(atob(encryptedData))));
         }
     </script>
 </body>

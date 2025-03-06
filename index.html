@@ -3,11 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" 
-          content="default-src 'self'; 
-                   script-src 'self' 'unsafe-inline'; 
-                   style-src 'self' 'unsafe-inline';
-                   connect-src 'self' https://api.allorigins.win;">
     <title>XSP Alignment Helper</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -60,22 +55,6 @@
         // File input handlers
         document.getElementById('dataFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
-            
-            // Check file size (e.g., max 5MB)
-            const maxSize = 5 * 1024 * 1024; // 5MB
-            if (file.size > maxSize) {
-                alert('File is too large. Maximum size is 5MB.');
-                this.value = ''; // Clear the input
-                return;
-            }
-            
-            // Verify file type
-            if (!file.type.match('text/csv')) {
-                alert('Only CSV files are allowed.');
-                this.value = '';
-                return;
-            }
-            
             const reader = new FileReader();
             
             reader.onload = function(e) {
@@ -89,7 +68,7 @@
                     .sort()
                     .pop();
                 
-                localStorage.setItem('dashboardData', encryptData(globalData));
+                localStorage.setItem('dashboardData', JSON.stringify(globalData));
                 localStorage.setItem('lastUpdateDate', lastUpdateDate);
                 
                 document.getElementById('lastUpdated').textContent = 
@@ -142,7 +121,7 @@
                 progressText.textContent = 'Complete!';
 
                 // Store in localStorage for persistence
-                localStorage.setItem('sellersData', encryptData(sellersData));
+                localStorage.setItem('sellersData', JSON.stringify(sellersData));
 
                 // Update the UI to show success
                 setTimeout(() => {
@@ -244,8 +223,8 @@
             const savedDate = localStorage.getItem('lastUpdateDate');
             
             if (savedData && savedSellers) {
-                globalData = decryptData(savedData);
-                sellersData = decryptData(savedSellers);
+                globalData = JSON.parse(savedData);
+                sellersData = JSON.parse(savedSellers);
                 lastUpdateDate = savedDate;
                 
                 document.getElementById('lastUpdated').textContent = 
@@ -304,25 +283,17 @@
                     
                     const publisherDiv = document.createElement('div');
                     publisherDiv.className = 'publisher-group';
-                    function escapeHtml(unsafe) {
-                        return unsafe
-                            .replace(/&/g, "&amp;")
-                            .replace(/</g, "&lt;")
-                            .replace(/>/g, "&gt;")
-                            .replace(/"/g, "&quot;")
-                            .replace(/'/g, "&#039;");
-                    }
                     publisherDiv.innerHTML = `
                         <div class="publisher-header">
-                            <h3 class="publisher-name">${escapeHtml(pub.name)}</h3>
+                            <h3 class="publisher-name">${pub.name}</h3>
                             <div class="publisher-info">
-                                <span class="seller-label">ID:</span> ${escapeHtml(pub.id)}
+                                <span class="seller-label">ID:</span> ${pub.id}
                             </div>
                             ${sellerInfo ? `
                                 <div class="seller-info">
-                                    <div><span class="seller-label">Classification:</span> ${escapeHtml(sellerInfo.seller_type)}</div>
-                                    ${sellerInfo.name ? `<div><span class="seller-label">Name:</span> ${escapeHtml(sellerInfo.name)}</div>` : ''}
-                                    ${sellerInfo.domain ? `<div><span class="seller-label">Domain:</span> ${escapeHtml(sellerInfo.domain)}</div>` : ''}
+                                    <div><span class="seller-label">Classification:</span> ${sellerInfo.seller_type}</div>
+                                    ${sellerInfo.name ? `<div><span class="seller-label">Name:</span> ${sellerInfo.name}</div>` : ''}
+                                    ${sellerInfo.domain ? `<div><span class="seller-label">Domain:</span> ${sellerInfo.domain}</div>` : ''}
                                 </div>
                             ` : ''}
                             <div class="device-types">
@@ -394,17 +365,6 @@
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             });
         });
-
-        // Add encryption for sensitive data before storing
-        function encryptData(data) {
-            // Convert to UTF-8 safe base64
-            return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-        }
-
-        function decryptData(encryptedData) {
-            // Convert from UTF-8 safe base64
-            return JSON.parse(decodeURIComponent(escape(atob(encryptedData))));
-        }
     </script>
 </body>
 </html>
