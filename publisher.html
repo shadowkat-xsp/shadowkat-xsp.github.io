@@ -463,6 +463,17 @@
                 group.style.display = text.includes(searchText) ? '' : 'none';
             });
         }
+
+        // Add encryption/decryption functions
+        function encryptData(data) {
+            // Convert to UTF-8 safe base64
+            return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+        }
+
+        function decryptData(encryptedData) {
+            // Convert from UTF-8 safe base64
+            return JSON.parse(decodeURIComponent(escape(atob(encryptedData))));
+        }
     </script>
 </body>
 </html>
