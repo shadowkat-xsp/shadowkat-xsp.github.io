@@ -288,23 +288,6 @@
             }
         };
 
-        // Load saved data when page loads
-        window.addEventListener('load', function() {
-            const savedData = localStorage.getItem('dashboardData');
-            const savedSellers = localStorage.getItem('sellersData');
-            const savedDate = localStorage.getItem('lastUpdateDate');
-            
-            if (savedData && savedSellers) {
-                globalData = decryptData(savedData);
-                sellersData = decryptData(savedSellers);
-                lastUpdateDate = savedDate;
-                
-                document.getElementById('lastUpdated').textContent = 
-                    `Last Updated: ${formatDate(lastUpdateDate)}`;
-                updateDropdown();
-            }
-        });
-
         function formatDate(dateStr) {
             if (!dateStr) return 'N/A';
             const date = new Date(dateStr);
@@ -332,6 +315,23 @@
                 }
             });
         }
+
+        // Load saved data when page loads
+        window.addEventListener('load', function() {
+            const savedData = localStorage.getItem('dashboardData');
+            const savedSellers = localStorage.getItem('sellersData');
+            const savedDate = localStorage.getItem('lastUpdateDate');
+            
+            if (savedData && savedSellers) {
+                globalData = decryptData(savedData);
+                sellersData = decryptData(savedSellers);
+                lastUpdateDate = savedDate;
+                
+                document.getElementById('lastUpdated').textContent = 
+                    `Last Updated: ${formatDate(lastUpdateDate)}`;
+                updateDropdown();
+            }
+        });
 
         function getBidderRequirementsHtml(bidderName) {
             const bidderInfo = bidderRequirements[bidderName];
