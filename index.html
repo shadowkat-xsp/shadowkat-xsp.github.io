@@ -3,6 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self'; 
+                   script-src 'self' 'unsafe-inline'; 
+                   style-src 'self' 'unsafe-inline';
+                   connect-src 'self' https://api.allorigins.win;">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="Strict-Transport-Security" content="max-age=31536000; includeSubDomains">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
     <title>XSP Alignment Helper</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -52,9 +62,76 @@
             // Your bidder requirements here
         };
 
+        // Rate limiting implementation
+        const rateLimiter = {
+            attempts: {},
+            resetTime: 60000, // 1 minute
+            maxAttempts: 5,
+
+            checkLimit: function(key) {
+                const now = Date.now();
+                if (!this.attempts[key]) {
+                    this.attempts[key] = {
+                        count: 1,
+                        firstAttempt: now
+                    };
+                    return true;
+                }
+
+                const attempt = this.attempts[key];
+                if (now - attempt.firstAttempt > this.resetTime) {
+                    // Reset if time window has passed
+                    this.attempts[key] = {
+                        count: 1,
+                        firstAttempt: now
+                    };
+                    return true;
+                }
+
+                if (attempt.count >= this.maxAttempts) {
+                    return false;
+                }
+
+                attempt.count++;
+                return true;
+            }
+        };
+
+        // HTTPS enforcement
+        function enforceHTTPS() {
+            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                window.location.href = 'https:' + window.location.href.substring(window.location.protocol.length);
+            }
+        }
+
+        // Call HTTPS enforcement immediately
+        enforceHTTPS();
+
         // File input handlers
         document.getElementById('dataFile').addEventListener('change', function(e) {
+            if (!rateLimiter.checkLimit('fileUpload')) {
+                alert('Too many upload attempts. Please wait a minute before trying again.');
+                this.value = '';
+                return;
+            }
+
             const file = e.target.files[0];
+            
+            // Check file size (e.g., max 5MB)
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            if (file.size > maxSize) {
+                alert('File is too large. Maximum size is 5MB.');
+                this.value = ''; // Clear the input
+                return;
+            }
+            
+            // Verify file type
+            if (!file.type.match('text/csv')) {
+                alert('Only CSV files are allowed.');
+                this.value = '';
+                return;
+            }
+            
             const reader = new FileReader();
             
             reader.onload = function(e) {
@@ -68,7 +145,7 @@
                     .sort()
                     .pop();
                 
-                localStorage.setItem('dashboardData', JSON.stringify(globalData));
+                localStorage.setItem('dashboardData', encryptData(globalData));
                 localStorage.setItem('lastUpdateDate', lastUpdateDate);
                 
                 document.getElementById('lastUpdated').textContent = 
@@ -87,14 +164,20 @@
             const progressText = document.getElementById('progressText');
             const fetchButton = document.getElementById('fetchSellersJson');
 
+            // Check rate limit
+            if (!rateLimiter.checkLimit('fetchSellers')) {
+                alert('Too many requests. Please wait a minute before trying again.');
+                return;
+            }
+
             try {
                 progressContainer.style.display = 'block';
                 fetchButton.disabled = true;
                 progressBar.style.width = '0%';
                 progressText.textContent = 'Fetching sellers.json...';
 
-                // Fetch the sellers.json with a proxy to avoid CORS issues
-                const response = await fetch('https://api.allorigins.win/raw?url=https://lijit.com/sellers.json');
+                // Use your own secure backend proxy instead
+                const response = await fetch('/api/sellers-json');
                 
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
@@ -121,7 +204,7 @@
                 progressText.textContent = 'Complete!';
 
                 // Store in localStorage for persistence
-                localStorage.setItem('sellersData', JSON.stringify(sellersData));
+                localStorage.setItem('sellersData', encryptData(sellersData));
 
                 // Update the UI to show success
                 setTimeout(() => {
@@ -223,8 +306,8 @@
             const savedDate = localStorage.getItem('lastUpdateDate');
             
             if (savedData && savedSellers) {
-                globalData = JSON.parse(savedData);
-                sellersData = JSON.parse(savedSellers);
+                globalData = decryptData(savedData);
+                sellersData = decryptData(savedSellers);
                 lastUpdateDate = savedDate;
                 
                 document.getElementById('lastUpdated').textContent = 
@@ -283,17 +366,25 @@
                     
                     const publisherDiv = document.createElement('div');
                     publisherDiv.className = 'publisher-group';
+                    function escapeHtml(unsafe) {
+                        return unsafe
+                            .replace(/&/g, "&amp;")
+                            .replace(/</g, "&lt;")
+                            .replace(/>/g, "&gt;")
+                            .replace(/"/g, "&quot;")
+                            .replace(/'/g, "&#039;");
+                    }
                     publisherDiv.innerHTML = `
                         <div class="publisher-header">
-                            <h3 class="publisher-name">${pub.name}</h3>
+                            <h3 class="publisher-name">${escapeHtml(pub.name)}</h3>
                             <div class="publisher-info">
-                                <span class="seller-label">ID:</span> ${pub.id}
+                                <span class="seller-label">ID:</span> ${escapeHtml(pub.id)}
                             </div>
                             ${sellerInfo ? `
                                 <div class="seller-info">
-                                    <div><span class="seller-label">Classification:</span> ${sellerInfo.seller_type}</div>
-                                    ${sellerInfo.name ? `<div><span class="seller-label">Name:</span> ${sellerInfo.name}</div>` : ''}
-                                    ${sellerInfo.domain ? `<div><span class="seller-label">Domain:</span> ${sellerInfo.domain}</div>` : ''}
+                                    <div><span class="seller-label">Classification:</span> ${escapeHtml(sellerInfo.seller_type)}</div>
+                                    ${sellerInfo.name ? `<div><span class="seller-label">Name:</span> ${escapeHtml(sellerInfo.name)}</div>` : ''}
+                                    ${sellerInfo.domain ? `<div><span class="seller-label">Domain:</span> ${escapeHtml(sellerInfo.domain)}</div>` : ''}
                                 </div>
                             ` : ''}
                             <div class="device-types">
@@ -365,6 +456,17 @@
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             });
         });
+
+        // Add encryption for sensitive data before storing
+        function encryptData(data) {
+            // This is a simple example - in production use a proper encryption library
+            return btoa(JSON.stringify(data));
+        }
+
+        function decryptData(encryptedData) {
+            // This is a simple example - in production use a proper encryption library
+            return JSON.parse(atob(encryptedData));
+        }
     </script>
 </body>
 </html>
