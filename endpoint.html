@@ -9,11 +9,6 @@
                    script-src 'self' 'unsafe-inline'; 
                    style-src 'self' 'unsafe-inline';
                    connect-src 'self' https://api.allorigins.win;">
-    <meta http-equiv="X-Frame-Options" content="DENY">
-    <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="Strict-Transport-Security" content="max-age=31536000; includeSubDomains">
-    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
-    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
     <title>XSP Alignment Helper - Endpoint View</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -46,8 +41,69 @@
         let sellersData = {};
         let lastUpdateDate = '';
 
-        // Load saved data when page loads
-        window.addEventListener('load', function() {
+        // Rate limiting implementation
+        const rateLimiter = {
+            attempts: {},
+            resetTime: 60000,
+            maxAttempts: 5,
+            checkLimit: function(key) {
+                const now = Date.now();
+                if (!this.attempts[key]) {
+                    this.attempts[key] = {
+                        count: 1,
+                        firstAttempt: now
+                    };
+                    return true;
+                }
+
+                const attempt = this.attempts[key];
+                if (now - attempt.firstAttempt > this.resetTime) {
+                    this.attempts[key] = {
+                        count: 1,
+                        firstAttempt: now
+                    };
+                    return true;
+                }
+
+                if (attempt.count >= this.maxAttempts) {
+                    return false;
+                }
+
+                attempt.count++;
+                return true;
+            }
+        };
+
+        // HTTPS enforcement
+        function enforceHTTPS() {
+            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                window.location.href = 'https:' + window.location.href.substring(window.location.protocol.length);
+            }
+        }
+
+        // Initialize all event listeners after DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Call HTTPS enforcement
+            enforceHTTPS();
+
+            // Scroll-to-top functionality
+            const scrollButton = document.getElementById('scrollTop');
+            if (scrollButton) {
+                window.addEventListener('scroll', function() {
+                    if (window.pageYOffset > 300) {
+                        scrollButton.classList.add('visible');
+                    } else {
+                        scrollButton.classList.remove('visible');
+                    }
+                });
+
+                scrollButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            }
+
+            // Load saved data
             const savedData = localStorage.getItem('dashboardData');
             const savedSellers = localStorage.getItem('sellersData');
             const savedDate = localStorage.getItem('lastUpdateDate');
@@ -57,13 +113,16 @@
                 sellersData = JSON.parse(savedSellers);
                 lastUpdateDate = savedDate;
                 
-                document.getElementById('lastUpdated').textContent = 
-                    `Last Updated: ${formatDate(lastUpdateDate)}`;
+                const lastUpdatedElement = document.getElementById('lastUpdated');
+                if (lastUpdatedElement) {
+                    lastUpdatedElement.textContent = `Last Updated: ${formatDate(lastUpdateDate)}`;
+                }
                 updateDropdown();
             } else {
-                // Add message if no data is found in cache
-                document.getElementById('lastUpdated').textContent = 
-                    'Please upload data files on the Bidder View page';
+                const lastUpdatedElement = document.getElementById('lastUpdated');
+                if (lastUpdatedElement) {
+                    lastUpdatedElement.textContent = 'Please upload data files on the Bidder View page';
+                }
             }
         });
 
@@ -120,138 +179,76 @@
         }
 
         function updateDisplay() {
-    const selectedBidder = document.getElementById('bidderSelect').value;
-    const endpointList = document.getElementById('endpointList');
-    endpointList.innerHTML = '';
-    
-    if (!selectedBidder) return;
-
-    // Group data by endpoint and publisher
-    const endpointGroups = {};
-    globalData
-        .filter(entry => entry.bidder_name === selectedBidder)
-        .forEach(entry => {
-            const endpoint = entry.endpoint || '';
-            if (!endpointGroups[endpoint]) {
-                endpointGroups[endpoint] = new Map();
-            }
+            const selectedBidder = document.getElementById('bidderSelect').value;
+            const endpointList = document.getElementById('endpointList');
+            endpointList.innerHTML = '';
             
-            const publisherKey = `${entry.pub_name}|${entry.pub_id}`;
-            if (!endpointGroups[endpoint].has(publisherKey)) {
-                endpointGroups[endpoint].set(publisherKey, {
-                    name: entry.pub_name,
-                    id: entry.pub_id,
-                    pub_type: entry.pub_type || '',
-                    device_types: new Set()
+            if (!selectedBidder) return;
+
+            // Group data by endpoint and publisher
+            const endpointGroups = {};
+            globalData
+                .filter(entry => entry.bidder_name === selectedBidder)
+                .forEach(entry => {
+                    const endpoint = entry.endpoint || '';
+                    if (!endpointGroups[endpoint]) {
+                        endpointGroups[endpoint] = new Map();
+                    }
+                    
+                    const publisherKey = `${entry.pub_name}|${entry.pub_id}`;
+                    if (!endpointGroups[endpoint].has(publisherKey)) {
+                        endpointGroups[endpoint].set(publisherKey, {
+                            name: entry.pub_name,
+                            id: entry.pub_id,
+                            pub_type: entry.pub_type || '',
+                            device_types: new Set()
+                        });
+                    }
+                    
+                    if (entry.device_type) {
+                        endpointGroups[endpoint].get(publisherKey).device_types.add(entry.device_type);
+                    }
                 });
-            }
-            
-            if (entry.device_type) {
-                endpointGroups[endpoint].get(publisherKey).device_types.add(entry.device_type);
-            }
-        });
 
-    // Display endpoints and their publishers
-    Object.entries(endpointGroups)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .forEach(([endpoint, publishers]) => {
-            const publisherArray = Array.from(publishers.values())
-                .sort((a, b) => a.name.localeCompare(b.name));
+            // Display endpoints and their publishers
+            Object.entries(endpointGroups)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .forEach(([endpoint, publishers]) => {
+                    const publisherArray = Array.from(publishers.values())
+                        .sort((a, b) => a.name.localeCompare(b.name));
 
-            const section = document.createElement('div');
-            section.className = 'endpoint-section';
-            section.innerHTML = `
-                <div class="endpoint-header">
-                    ${endpoint}
-                    <span class="endpoint-count">(${publisherArray.length} publishers)</span>
-                </div>
-                <div class="publisher-list">
-                    <div class="publisher-list-header">
-                        <div class="publisher-list-name">Publisher Name</div>
-                        <div class="publisher-id">Publisher ID</div>
-                        <div class="publisher-type">Type</div>
-                        <div class="device-type">Device Types</div>
-                    </div>
-                    ${publisherArray.map(pub => `
-                        <div class="publisher-item">
-                            <div class="publisher-list-name">${pub.name}</div>
-                            <div class="publisher-id">${pub.id}</div>
-                            <div class="publisher-type">${pub.pub_type}</div>
-                            <div class="device-type">
-                                ${Array.from(pub.device_types)
-                                    .sort()
-                                    .map(device => `<span class="device-type-tag">${device}</span>`)
-                                    .join('')}
-                            </div>
+                    const section = document.createElement('div');
+                    section.className = 'endpoint-section';
+                    section.innerHTML = `
+                        <div class="endpoint-header">
+                            ${endpoint}
+                            <span class="endpoint-count">(${publisherArray.length} publishers)</span>
                         </div>
-                    `).join('')}
-                </div>
-            `;
-            endpointList.appendChild(section);
-        });
-}
-
-        // Scroll-to-top functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            const scrollButton = document.getElementById('scrollTop');
-            
-            window.addEventListener('scroll', function() {
-                if (window.pageYOffset > 300) {
-                    scrollButton.classList.add('visible');
-                } else {
-                    scrollButton.classList.remove('visible');
-                }
-            });
-
-            scrollButton.addEventListener('click', function(e) {
-                e.preventDefault();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            });
-        });
-
-        // Add rate limiting implementation
-        const rateLimiter = {
-            attempts: {},
-            resetTime: 60000, // 1 minute
-            maxAttempts: 5,
-
-            checkLimit: function(key) {
-                const now = Date.now();
-                if (!this.attempts[key]) {
-                    this.attempts[key] = {
-                        count: 1,
-                        firstAttempt: now
-                    };
-                    return true;
-                }
-
-                const attempt = this.attempts[key];
-                if (now - attempt.firstAttempt > this.resetTime) {
-                    this.attempts[key] = {
-                        count: 1,
-                        firstAttempt: now
-                    };
-                    return true;
-                }
-
-                if (attempt.count >= this.maxAttempts) {
-                    return false;
-                }
-
-                attempt.count++;
-                return true;
-            }
-        };
-
-        // Add HTTPS enforcement
-        function enforceHTTPS() {
-            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-                window.location.href = 'https:' + window.location.href.substring(window.location.protocol.length);
-            }
+                        <div class="publisher-list">
+                            <div class="publisher-list-header">
+                                <div class="publisher-list-name">Publisher Name</div>
+                                <div class="publisher-id">Publisher ID</div>
+                                <div class="publisher-type">Type</div>
+                                <div class="device-type">Device Types</div>
+                            </div>
+                            ${publisherArray.map(pub => `
+                                <div class="publisher-item">
+                                    <div class="publisher-list-name">${pub.name}</div>
+                                    <div class="publisher-id">${pub.id}</div>
+                                    <div class="publisher-type">${pub.pub_type}</div>
+                                    <div class="device-type">
+                                        ${Array.from(pub.device_types)
+                                            .sort()
+                                            .map(device => `<span class="device-type-tag">${device}</span>`)
+                                            .join('')}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    endpointList.appendChild(section);
+                });
         }
-
-        // Call HTTPS enforcement immediately
-        enforceHTTPS();
     </script>
 </body>
 </html>
