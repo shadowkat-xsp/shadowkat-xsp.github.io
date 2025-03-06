@@ -3,6 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self'; 
+                   script-src 'self' 'unsafe-inline'; 
+                   style-src 'self' 'unsafe-inline';
+                   connect-src 'self' https://api.allorigins.win;">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="Strict-Transport-Security" content="max-age=31536000; includeSubDomains">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
     <title>XSP Alignment Helper - Publisher View</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -358,7 +369,56 @@
             `;
         }
 
+        // Add rate limiting implementation
+        const rateLimiter = {
+            attempts: {},
+            resetTime: 60000, // 1 minute
+            maxAttempts: 5,
+
+            checkLimit: function(key) {
+                const now = Date.now();
+                if (!this.attempts[key]) {
+                    this.attempts[key] = {
+                        count: 1,
+                        firstAttempt: now
+                    };
+                    return true;
+                }
+
+                const attempt = this.attempts[key];
+                if (now - attempt.firstAttempt > this.resetTime) {
+                    this.attempts[key] = {
+                        count: 1,
+                        firstAttempt: now
+                    };
+                    return true;
+                }
+
+                if (attempt.count >= this.maxAttempts) {
+                    return false;
+                }
+
+                attempt.count++;
+                return true;
+            }
+        };
+
+        // Add HTTPS enforcement
+        function enforceHTTPS() {
+            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                window.location.href = 'https:' + window.location.href.substring(window.location.protocol.length);
+            }
+        }
+
+        // Call HTTPS enforcement immediately
+        enforceHTTPS();
+
+        // Modify the updateDisplay function to use rate limiting
         function updateDisplay() {
+            if (!rateLimiter.checkLimit('displayUpdate')) {
+                alert('Too many updates. Please wait a minute before trying again.');
+                return;
+            }
             const selectedPublisher = document.getElementById('publisherSelect').value;
             const bidderList = document.getElementById('bidderList');
             bidderList.innerHTML = '';
