@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Security Headers -->
+    <!-- Keep only CSP header -->
     <meta http-equiv="Content-Security-Policy" 
           content="default-src 'self'; 
                    script-src 'self' 'unsafe-inline'; 
@@ -41,68 +41,8 @@
         let sellersData = {};
         let lastUpdateDate = '';
 
-        // Rate limiting implementation
-        const rateLimiter = {
-            attempts: {},
-            resetTime: 60000,
-            maxAttempts: 5,
-            checkLimit: function(key) {
-                const now = Date.now();
-                if (!this.attempts[key]) {
-                    this.attempts[key] = {
-                        count: 1,
-                        firstAttempt: now
-                    };
-                    return true;
-                }
-
-                const attempt = this.attempts[key];
-                if (now - attempt.firstAttempt > this.resetTime) {
-                    this.attempts[key] = {
-                        count: 1,
-                        firstAttempt: now
-                    };
-                    return true;
-                }
-
-                if (attempt.count >= this.maxAttempts) {
-                    return false;
-                }
-
-                attempt.count++;
-                return true;
-            }
-        };
-
-        // HTTPS enforcement
-        function enforceHTTPS() {
-            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-                window.location.href = 'https:' + window.location.href.substring(window.location.protocol.length);
-            }
-        }
-
         // Initialize all event listeners after DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
-            // Call HTTPS enforcement
-            enforceHTTPS();
-
-            // Scroll-to-top functionality
-            const scrollButton = document.getElementById('scrollTop');
-            if (scrollButton) {
-                window.addEventListener('scroll', function() {
-                    if (window.pageYOffset > 300) {
-                        scrollButton.classList.add('visible');
-                    } else {
-                        scrollButton.classList.remove('visible');
-                    }
-                });
-
-                scrollButton.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                });
-            }
-
             // Load saved data
             const savedData = localStorage.getItem('dashboardData');
             const savedSellers = localStorage.getItem('sellersData');
