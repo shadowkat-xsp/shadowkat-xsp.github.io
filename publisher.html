@@ -288,15 +288,15 @@
             }
         };
 
-        // Load data from localStorage when page loads
+        // Load saved data when page loads
         window.addEventListener('load', function() {
             const savedData = localStorage.getItem('dashboardData');
             const savedSellers = localStorage.getItem('sellersData');
             const savedDate = localStorage.getItem('lastUpdateDate');
             
             if (savedData && savedSellers) {
-                globalData = JSON.parse(savedData);
-                sellersData = JSON.parse(savedSellers);
+                globalData = decryptData(savedData);
+                sellersData = decryptData(savedSellers);
                 lastUpdateDate = savedDate;
                 
                 document.getElementById('lastUpdated').textContent = 

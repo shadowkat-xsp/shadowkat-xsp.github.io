@@ -48,8 +48,8 @@
             const savedDate = localStorage.getItem('lastUpdateDate');
             
             if (savedData && savedSellers) {
-                globalData = JSON.parse(savedData);
-                sellersData = JSON.parse(savedSellers);
+                globalData = decryptData(savedData);
+                sellersData = decryptData(savedSellers);
                 lastUpdateDate = savedDate;
                 
                 document.getElementById('lastUpdated').textContent = 
