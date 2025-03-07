@@ -333,6 +333,7 @@
         }
 
         function findSellerInfo(pub_id) {
+            if (!pub_id || !sellersData) return null;
             return sellersData[pub_id] || null;
         }
 
