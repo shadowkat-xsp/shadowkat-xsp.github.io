@@ -37,27 +37,39 @@
 
         // Load saved data when page loads
         window.addEventListener('load', function() {
+            console.log('Opportunities View: Loading saved data...');
             const savedData = localStorage.getItem('dashboardData');
             const savedSellers = localStorage.getItem('sellersData');
             const savedDate = localStorage.getItem('lastUpdateDate');
             
+            console.log('Opportunities View: Data available in localStorage:', 
+                savedData ? 'dashboardData (yes)' : 'dashboardData (no)',
+                savedSellers ? 'sellersData (yes)' : 'sellersData (no)');
+            
             if (savedData) {
                 try {
                     globalData = JSON.parse(savedData);
+                    console.log('Opportunities View: Loaded dashboardData from localStorage:', globalData.length, 'entries');
+                    
                     if (savedSellers) {
                         sellersData = JSON.parse(savedSellers);
+                        console.log('Opportunities View: Loaded sellersData from localStorage:', Object.keys(sellersData).length, 'sellers');
+                    } else {
+                        console.log('Opportunities View: No sellersData found in localStorage');
                     }
+                    
                     lastUpdateDate = savedDate || '';
                     
                     document.getElementById('lastUpdated').textContent = 
                         `Last Updated: ${formatDate(lastUpdateDate)}`;
                     updateDropdown();
                 } catch (error) {
-                    console.error('Error parsing saved data:', error);
+                    console.error('Opportunities View: Error parsing saved data:', error);
                     document.getElementById('lastUpdated').textContent = 
                         'Error loading data. Please reload and try again.';
                 }
             } else {
+                console.log('Opportunities View: No saved data found in localStorage');
                 document.getElementById('lastUpdated').textContent = 
                     'Please upload data files on the Bidder View page';
             }

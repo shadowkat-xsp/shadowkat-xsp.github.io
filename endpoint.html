@@ -37,28 +37,39 @@
 
         // Load saved data when page loads
         window.addEventListener('load', function() {
+            console.log('Endpoint View: Loading saved data...');
             const savedData = localStorage.getItem('dashboardData');
             const savedSellers = localStorage.getItem('sellersData');
             const savedDate = localStorage.getItem('lastUpdateDate');
             
+            console.log('Endpoint View: Data available in localStorage:', 
+                savedData ? 'dashboardData (yes)' : 'dashboardData (no)',
+                savedSellers ? 'sellersData (yes)' : 'sellersData (no)');
+            
             if (savedData) {
                 try {
                     globalData = JSON.parse(savedData);
+                    console.log('Endpoint View: Loaded dashboardData from localStorage:', globalData.length, 'entries');
+                    
                     if (savedSellers) {
                         sellersData = JSON.parse(savedSellers);
+                        console.log('Endpoint View: Loaded sellersData from localStorage:', Object.keys(sellersData).length, 'sellers');
+                    } else {
+                        console.log('Endpoint View: No sellersData found in localStorage');
                     }
+                    
                     lastUpdateDate = savedDate || '';
                     
                     document.getElementById('lastUpdated').textContent = 
                         `Last Updated: ${formatDate(lastUpdateDate)}`;
                     updateDropdown();
                 } catch (error) {
-                    console.error('Error parsing saved data:', error);
+                    console.error('Endpoint View: Error parsing saved data:', error);
                     document.getElementById('lastUpdated').textContent = 
                         'Error loading data. Please reload and try again.';
                 }
             } else {
-                // Add message if no data is found in cache
+                console.log('Endpoint View: No saved data found in localStorage');
                 document.getElementById('lastUpdated').textContent = 
                     'Please upload data files on the Bidder View page';
             }

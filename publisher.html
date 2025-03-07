@@ -284,27 +284,39 @@
 
         // Load data from localStorage when page loads
         window.addEventListener('load', function() {
+            console.log('Publisher View: Loading saved data...');
             const savedData = localStorage.getItem('dashboardData');
             const savedSellers = localStorage.getItem('sellersData');
             const savedDate = localStorage.getItem('lastUpdateDate');
             
+            console.log('Publisher View: Data available in localStorage:', 
+                savedData ? 'dashboardData (yes)' : 'dashboardData (no)',
+                savedSellers ? 'sellersData (yes)' : 'sellersData (no)');
+            
             if (savedData) {
                 try {
                     globalData = JSON.parse(savedData);
+                    console.log('Publisher View: Loaded dashboardData from localStorage:', globalData.length, 'entries');
+                    
                     if (savedSellers) {
                         sellersData = JSON.parse(savedSellers);
+                        console.log('Publisher View: Loaded sellersData from localStorage:', Object.keys(sellersData).length, 'sellers');
+                    } else {
+                        console.log('Publisher View: No sellersData found in localStorage');
                     }
+                    
                     lastUpdateDate = savedDate || '';
                     
                     document.getElementById('lastUpdated').textContent = 
                         `Last Updated: ${formatDate(lastUpdateDate)}`;
                     updateDropdown();
                 } catch (error) {
-                    console.error('Error parsing saved data:', error);
+                    console.error('Publisher View: Error parsing saved data:', error);
                     document.getElementById('lastUpdated').textContent = 
                         'Error loading data. Please reload and try again.';
                 }
             } else {
+                console.log('Publisher View: No saved data found in localStorage');
                 document.getElementById('lastUpdated').textContent = 
                     'Please upload data files on the Bidder View page';
             }

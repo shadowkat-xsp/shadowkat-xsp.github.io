@@ -60,7 +60,7 @@
             reader.onload = function(e) {
                 const text = e.target.result;
                 globalData = parseCSV(text);
-                console.log('First parsed entry:', globalData[0]); // Debug log
+                console.log('Parsed data entries:', globalData.length);
                 
                 lastUpdateDate = globalData
                     .map(entry => entry.date_only)
@@ -68,13 +68,20 @@
                     .sort()
                     .pop();
                 
-                localStorage.setItem('dashboardData', JSON.stringify(globalData));
-                localStorage.setItem('lastUpdateDate', lastUpdateDate);
-                
-                document.getElementById('lastUpdated').textContent = 
-                    `Last Updated: ${formatDate(lastUpdateDate)}`;
-                
-                updateDropdown();
+                try {
+                    // Store data in localStorage
+                    localStorage.setItem('dashboardData', JSON.stringify(globalData));
+                    localStorage.setItem('lastUpdateDate', lastUpdateDate);
+                    console.log('Data saved to localStorage:', globalData.length, 'entries');
+                    
+                    document.getElementById('lastUpdated').textContent = 
+                        `Last Updated: ${formatDate(lastUpdateDate)}`;
+                    
+                    updateDropdown();
+                } catch (error) {
+                    console.error('Error saving to localStorage:', error);
+                    alert('Error saving data to localStorage. The data may be too large or localStorage may be full.');
+                }
             };
             
             reader.readAsText(file);
@@ -120,17 +127,23 @@
                 progressBar.style.width = '100%';
                 progressText.textContent = 'Complete!';
 
-                // Store in localStorage for persistence
-                localStorage.setItem('sellersData', JSON.stringify(sellersData));
-
-                // Update the UI to show success
-                setTimeout(() => {
-                    progressContainer.style.display = 'none';
-                    fetchButton.disabled = false;
-                    alert('Sellers.json data loaded successfully!');
-                }, 1000);
-
-                console.log('Sellers.json loaded:', Object.keys(sellersData).length, 'sellers');
+                try {
+                    // Store in localStorage for persistence
+                    localStorage.setItem('sellersData', JSON.stringify(sellersData));
+                    console.log('Sellers.json saved to localStorage:', Object.keys(sellersData).length, 'sellers');
+                    
+                    // Update the UI to show success
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        fetchButton.disabled = false;
+                        alert('Sellers.json data loaded successfully!');
+                    }, 1000);
+                } catch (storageError) {
+                    console.error('Error saving sellers.json to localStorage:', storageError);
+                    progressText.textContent = 'Error saving data to localStorage';
+                    progressBar.style.backgroundColor = '#ff4444';
+                    alert('Error saving sellers.json to localStorage. The data may be too large.');
+                }
                 
             } catch (error) {
                 console.error('Error fetching sellers.json:', error);
