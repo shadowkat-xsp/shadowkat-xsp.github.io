@@ -219,17 +219,38 @@
             }
         }
 
-        // Replace the event listeners with this simpler version
-        document.addEventListener('DOMContentLoaded', function() {
+        // Add click handler for the fetch button
+        const setupButtonListener = function() {
             const fetchButton = document.getElementById('fetchSellersJson');
             if (fetchButton) {
+                console.log('Setting up fetch button listener');
+                // Remove any existing listeners to avoid duplicates
+                fetchButton.removeEventListener('click', fetchSellersJson);
+                // Add the new listener
                 fetchButton.addEventListener('click', function() {
                     console.log('Fetch button clicked');
                     fetchSellersJson();
                 });
+                // Also set the onclick property as a fallback
+                fetchButton.onclick = function() {
+                    console.log('Fetch button onclick triggered');
+                    fetchSellersJson();
+                    return false; // Prevent default action
+                };
             } else {
-                console.error('Fetch button not found in DOM');
+                console.error('Fetch button not found');
             }
+        };
+
+        // Call this function immediately
+        setupButtonListener();
+
+        // Also call it when the window loads
+        window.addEventListener('load', function() {
+            // Existing load event code...
+            
+            // Add this at the end of the load event handler
+            setupButtonListener();
         });
 
         // Improved CSV parsing function
