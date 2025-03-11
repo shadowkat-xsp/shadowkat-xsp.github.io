@@ -93,24 +93,69 @@
                 progressBar.style.width = '0%';
                 progressText.textContent = 'Fetching sellers.json...';
 
-                // Try with no-cors mode but keep original endpoint
-                const response = await fetch('https://lijit.com/sellers.json', {
-                    mode: 'no-cors',
-                    headers: {
-                        'Accept': 'application/json'
+                // Try different methods to fetch the data
+                let response = null;
+                let data = null;
+                let error = null;
+
+                // Method 1: Try direct fetch
+                try {
+                    progressText.textContent = 'Trying direct fetch...';
+                    response = await fetch('https://lijit.com/sellers.json');
+                    if (response.ok) {
+                        data = await response.json();
                     }
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
+                } catch (e) {
+                    console.log('Direct fetch failed:', e);
+                    error = e;
                 }
 
-                // Update progress to show we've started receiving data
-                progressBar.style.width = '50%';
-                progressText.textContent = 'Parsing data...';
+                // Method 2: Try with CORS proxy
+                if (!data) {
+                    try {
+                        progressText.textContent = 'Trying CORS proxy...';
+                        response = await fetch('https://api.allorigins.win/raw?url=https://lijit.com/sellers.json');
+                        if (response.ok) {
+                            data = await response.json();
+                        }
+                    } catch (e) {
+                        console.log('CORS proxy failed:', e);
+                        error = e;
+                    }
+                }
 
-                const data = await response.json();
-                
+                // Method 3: Try another CORS proxy
+                if (!data) {
+                    try {
+                        progressText.textContent = 'Trying alternate proxy...';
+                        response = await fetch('https://corsproxy.io/?https://lijit.com/sellers.json');
+                        if (response.ok) {
+                            data = await response.json();
+                        }
+                    } catch (e) {
+                        console.log('Alternate proxy failed:', e);
+                        error = e;
+                    }
+                }
+
+                // If all fetch methods fail, try to use cached data as fallback
+                if (!data) {
+                    const cachedData = localStorage.getItem('sellersData');
+                    if (cachedData) {
+                        progressText.textContent = 'Using cached data as fallback...';
+                        sellersData = JSON.parse(cachedData);
+                        progressBar.style.width = '100%';
+                        progressText.textContent = 'Using cached data (fetch failed)';
+                        setTimeout(() => {
+                            progressContainer.style.display = 'none';
+                            fetchButton.disabled = false;
+                        }, 1000);
+                        return;
+                    } else {
+                        throw error || new Error('All fetch methods failed');
+                    }
+                }
+
                 // Update progress to show we've parsed the JSON
                 progressBar.style.width = '75%';
                 progressText.textContent = 'Processing sellers...';
@@ -121,12 +166,13 @@
                     return acc;
                 }, {});
 
+                // Cache the data for fallback purposes
+                localStorage.setItem('sellersData', JSON.stringify(sellersData));
+                localStorage.setItem('sellersJsonLastFetch', new Date().getTime().toString());
+
                 // Complete the progress bar
                 progressBar.style.width = '100%';
                 progressText.textContent = 'Complete!';
-
-                // Store in localStorage for persistence
-                localStorage.setItem('sellersData', JSON.stringify(sellersData));
 
                 // Update the UI to show success
                 setTimeout(() => {
@@ -247,129 +293,4 @@
             bidderSelect.innerHTML = '<option value="">Select a Bidder</option>';
             bidders.sort().forEach(bidder => {
                 if (bidder) {
-                    bidderSelect.innerHTML += `<option value="${bidder}">${bidder}</option>`;
-                }
-            });
-        }
-
-        function updateDisplay() {
-            const selectedBidder = document.getElementById('bidderSelect').value;
-            const publisherList = document.getElementById('publisherList');
-            publisherList.innerHTML = '';
-            
-            if (!selectedBidder) return;
-
-            // Get bidder requirements
-            const requirements = bidderRequirements[selectedBidder] || {};
-
-            // Group publishers by name and collect their device types
-            const publisherGroups = {};
-            globalData
-                .filter(entry => entry.bidder_name === selectedBidder)
-                .forEach(entry => {
-                    const key = `${entry.pub_name}|${entry.pub_id}`;
-                    if (!publisherGroups[key]) {
-                        publisherGroups[key] = {
-                            name: entry.pub_name,
-                            id: entry.pub_id,
-                            device_types: new Set()
-                        };
-                    }
-                    if (entry.device_type) {
-                        publisherGroups[key].device_types.add(entry.device_type);
-                    }
-                });
-
-            // Display publishers
-            Object.values(publisherGroups)
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .forEach(pub => {
-                    const sellerInfo = findSellerInfo(pub.id);
-                    
-                    const publisherDiv = document.createElement('div');
-                    publisherDiv.className = 'publisher-group';
-                    publisherDiv.innerHTML = `
-                        <div class="publisher-header">
-                            <h3 class="publisher-name">${pub.name}</h3>
-                            <div class="publisher-info">
-                                <span class="seller-label">ID:</span> ${pub.id}
-                            </div>
-                            ${sellerInfo ? `
-                                <div class="seller-info">
-                                    <div><span class="seller-label">Classification:</span> ${sellerInfo.seller_type}</div>
-                                    ${sellerInfo.name ? `<div><span class="seller-label">Name:</span> ${sellerInfo.name}</div>` : ''}
-                                    ${sellerInfo.domain ? `<div><span class="seller-label">Domain:</span> ${sellerInfo.domain}</div>` : ''}
-                                </div>
-                            ` : ''}
-                            <div class="device-types">
-                                ${Array.from(pub.device_types)
-                                    .sort()
-                                    .map(device => `<span class="device-type">${device}</span>`)
-                                    .join('')}
-                            </div>
-                        </div>
-                    `;
-                    publisherList.appendChild(publisherDiv);
-                });
-
-            // Display bidder requirements if available
-            if (Object.keys(requirements).length > 0) {
-                const requirementsDiv = document.createElement('div');
-                requirementsDiv.className = 'bidder-notes';
-                requirementsDiv.innerHTML = `
-                    <div class="requirements-grid">
-                        <div class="requirement-item ${requirements.demandApproval ? '' : 'negative'}">
-                            <i>●</i> Approval: ${requirements.demandApproval ? 'Required' : 'Not Required'}
-                        </div>
-                        <div class="requirement-item ${requirements.appsTxt ? '' : 'negative'}">
-                            <i>●</i> Apps.txt: ${requirements.appsTxt ? 'Yes' : 'No'}
-                        </div>
-                        <div class="requirement-item ${requirements.ctv ? '' : 'negative'}">
-                            <i>●</i> CTV: ${requirements.ctv ? 'Yes' : 'No'}
-                        </div>
-                        <div class="requirement-item ${requirements.app ? '' : 'negative'}">
-                            <i>●</i> App: ${requirements.app ? 'Yes' : 'No'}
-                        </div>
-                        <div class="requirement-item ${requirements.sellersJson ? '' : 'negative'}">
-                            <i>●</i> Sellers.JSON: ${requirements.sellersJson ? 'Yes' : 'No'}
-                        </div>
-                        <div class="requirement-item ${requirements.bundleSubmission ? '' : 'negative'}">
-                            <i>●</i> Bundle Submit: ${requirements.bundleSubmission ? 'Required' : 'Not Required'}
-                        </div>
-                    </div>
-                    ${requirements.notes ? `<div class="notes-section">Notes: ${requirements.notes}</div>` : ''}
-                `;
-                publisherList.insertBefore(requirementsDiv, publisherList.firstChild);
-            }
-        }
-
-        function filterPublishers() {
-            const searchText = document.getElementById('searchBox').value.toLowerCase();
-            const publisherGroups = document.getElementsByClassName('publisher-group');
-            
-            Array.from(publisherGroups).forEach(group => {
-                const text = group.textContent.toLowerCase();
-                group.style.display = text.includes(searchText) ? '' : 'none';
-            });
-        }
-
-        // Scroll-to-top functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            const scrollButton = document.getElementById('scrollTop');
-            
-            window.addEventListener('scroll', function() {
-                if (window.pageYOffset > 300) {
-                    scrollButton.classList.add('visible');
-                } else {
-                    scrollButton.classList.remove('visible');
-                }
-            });
-
-            scrollButton.addEventListener('click', function(e) {
-                e.preventDefault();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            });
-        });
-    </script>
-</body>
-</html>
+                    bidderSelect.innerHTML += `<option value="${bidder}">${bidder}</option>`
