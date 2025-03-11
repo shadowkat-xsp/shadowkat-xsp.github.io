@@ -80,159 +80,157 @@
             reader.readAsText(file);
         });
 
-        // Add new function to fetch sellers.json
+        // Replace the entire fetchSellersJson function with this new implementation
         async function fetchSellersJson() {
             const progressContainer = document.getElementById('progressContainer');
             const progressBar = document.getElementById('progressBar');
             const progressText = document.getElementById('progressText');
             const fetchButton = document.getElementById('fetchSellersJson');
 
+            console.log('fetchSellersJson function called');
+            
+            // Reset UI
+            progressContainer.style.display = 'block';
+            fetchButton.disabled = true;
+            progressBar.style.width = '0%';
+            progressText.textContent = 'Starting...';
+            progressBar.style.backgroundColor = '#4CAF50';
+
             try {
-                progressContainer.style.display = 'block';
-                fetchButton.disabled = true;
-                progressBar.style.width = '0%';
-                progressText.textContent = 'Fetching sellers.json...';
-
-                // Try different methods to fetch the data
-                let response = null;
-                let data = null;
-                let error = null;
-
-                // Method 1: Try direct fetch
-                try {
-                    progressText.textContent = 'Trying direct fetch...';
-                    response = await fetch('https://lijit.com/sellers.json');
-                    console.log('Direct fetch response:', response.status, response.statusText);
-                    if (response.ok) {
-                        data = await response.json();
-                    } else {
-                        throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
-                    }
-                } catch (e) {
-                    console.log('Direct fetch failed:', e.message);
-                    error = e;
-                }
-
-                // Method 2: Try with CORS proxy
-                if (!data) {
+                // Step 1: Try to fetch from multiple sources
+                progressBar.style.width = '10%';
+                progressText.textContent = 'Attempting to download sellers.json...';
+                
+                // Define our proxy URLs
+                const proxyUrls = [
+                    'https://api.allorigins.win/raw?url=https://lijit.com/sellers.json',
+                    'https://corsproxy.io/?https://lijit.com/sellers.json',
+                    'https://cors-anywhere.herokuapp.com/https://lijit.com/sellers.json'
+                ];
+                
+                let jsonData = null;
+                let fetchError = null;
+                
+                // Try each proxy in sequence
+                for (let i = 0; i < proxyUrls.length; i++) {
+                    const proxyUrl = proxyUrls[i];
+                    progressBar.style.width = `${10 + (i * 10)}%`;
+                    progressText.textContent = `Trying proxy ${i+1}...`;
+                    
                     try {
-                        progressText.textContent = 'Trying CORS proxy...';
-                        const proxyUrl = 'https://api.allorigins.win/raw?url=https://lijit.com/sellers.json';
-                        console.log('Trying proxy:', proxyUrl);
-                        response = await fetch(proxyUrl);
-                        console.log('Proxy response:', response.status, response.statusText);
+                        console.log(`Trying proxy: ${proxyUrl}`);
+                        const response = await fetch(proxyUrl);
                         
                         if (response.ok) {
                             const text = await response.text();
-                            console.log('Response text length:', text.length);
+                            console.log(`Received ${text.length} bytes from proxy ${i+1}`);
+                            
+                            // Try to parse as JSON
                             try {
-                                data = JSON.parse(text);
+                                jsonData = JSON.parse(text);
+                                console.log('Successfully parsed JSON data');
+                                break; // Exit the loop if successful
                             } catch (parseError) {
-                                console.error('JSON parse error:', parseError);
-                                console.log('First 100 chars of response:', text.substring(0, 100));
-                                throw new Error('Invalid JSON response from proxy');
+                                console.error('Failed to parse JSON:', parseError);
+                                console.log('First 100 chars:', text.substring(0, 100));
                             }
                         } else {
-                            throw new Error(`Proxy HTTP error: ${response.status} ${response.statusText}`);
+                            console.log(`Proxy ${i+1} returned status: ${response.status}`);
                         }
-                    } catch (e) {
-                        console.log('CORS proxy failed:', e.message);
-                        error = e;
+                    } catch (error) {
+                        console.error(`Error with proxy ${i+1}:`, error);
+                        fetchError = error;
                     }
                 }
-
-                // Method 3: Try another CORS proxy
-                if (!data) {
-                    try {
-                        progressText.textContent = 'Trying alternate proxy...';
-                        const proxyUrl = 'https://corsproxy.io/?https://lijit.com/sellers.json';
-                        console.log('Trying alternate proxy:', proxyUrl);
-                        response = await fetch(proxyUrl);
-                        console.log('Alternate proxy response:', response.status, response.statusText);
-                        
-                        if (response.ok) {
-                            const text = await response.text();
-                            console.log('Response text length:', text.length);
-                            try {
-                                data = JSON.parse(text);
-                            } catch (parseError) {
-                                console.error('JSON parse error:', parseError);
-                                console.log('First 100 chars of response:', text.substring(0, 100));
-                                throw new Error('Invalid JSON response from alternate proxy');
-                            }
-                        } else {
-                            throw new Error(`Alt proxy HTTP error: ${response.status} ${response.statusText}`);
-                        }
-                    } catch (e) {
-                        console.log('Alternate proxy failed:', e.message);
-                        error = e;
-                    }
-                }
-
-                // If all fetch methods fail, try to use cached data as fallback
-                if (!data) {
+                
+                // If all proxies failed, try to use cached data
+                if (!jsonData) {
+                    progressBar.style.width = '40%';
+                    progressText.textContent = 'Download failed, checking cache...';
+                    
                     const cachedData = localStorage.getItem('sellersData');
                     if (cachedData) {
-                        progressText.textContent = 'Using cached data as fallback...';
-                        sellersData = JSON.parse(cachedData);
-                        progressBar.style.width = '100%';
-                        progressText.textContent = 'Using cached data (fetch failed)';
-                        setTimeout(() => {
-                            progressContainer.style.display = 'none';
-                            fetchButton.disabled = false;
-                        }, 1000);
-                        return;
-                    } else {
-                        throw error || new Error('All fetch methods failed');
+                        try {
+                            jsonData = JSON.parse(cachedData);
+                            progressBar.style.width = '50%';
+                            progressText.textContent = 'Using cached data';
+                            console.log('Using cached sellers.json data');
+                        } catch (e) {
+                            console.error('Error parsing cached data:', e);
+                        }
+                    }
+                    
+                    // If we still don't have data, throw an error
+                    if (!jsonData) {
+                        throw new Error('Failed to download sellers.json and no cache available');
                     }
                 }
-
-                // Update progress to show we've parsed the JSON
-                progressBar.style.width = '75%';
-                progressText.textContent = 'Processing sellers...';
-
-                // Process the sellers data
-                sellersData = data.sellers.reduce((acc, seller) => {
-                    acc[seller.seller_id] = seller;
-                    return acc;
-                }, {});
-
-                // Cache the data for fallback purposes
-                localStorage.setItem('sellersData', JSON.stringify(sellersData));
-                localStorage.setItem('sellersJsonLastFetch', new Date().getTime().toString());
-
-                // Complete the progress bar
+                
+                // Step 2: Process the data
+                progressBar.style.width = '60%';
+                progressText.textContent = 'Processing sellers data...';
+                
+                if (!jsonData.sellers || !Array.isArray(jsonData.sellers)) {
+                    throw new Error('Invalid sellers.json format');
+                }
+                
+                console.log(`Processing ${jsonData.sellers.length} sellers`);
+                
+                // Create a lookup object for faster access
+                sellersData = {};
+                jsonData.sellers.forEach(seller => {
+                    if (seller && seller.seller_id) {
+                        sellersData[seller.seller_id] = seller;
+                    }
+                });
+                
+                // Step 3: Save to localStorage
+                progressBar.style.width = '80%';
+                progressText.textContent = 'Saving to local storage...';
+                
+                try {
+                    localStorage.setItem('sellersData', JSON.stringify(sellersData));
+                    localStorage.setItem('sellersJsonLastFetch', new Date().toISOString());
+                    console.log('Saved sellers data to localStorage');
+                } catch (e) {
+                    console.warn('Failed to save to localStorage:', e);
+                    // Continue anyway since we have the data in memory
+                }
+                
+                // Step 4: Complete
                 progressBar.style.width = '100%';
                 progressText.textContent = 'Complete!';
-
-                // Update the UI to show success
+                console.log(`Successfully loaded ${Object.keys(sellersData).length} sellers`);
+                
                 setTimeout(() => {
                     progressContainer.style.display = 'none';
                     fetchButton.disabled = false;
-                    alert('Sellers.json data loaded successfully!');
-                }, 1000);
-
-                console.log('Sellers.json loaded:', Object.keys(sellersData).length, 'sellers');
+                }, 1500);
                 
             } catch (error) {
-                console.error('Error fetching sellers.json:', error);
-                progressText.textContent = 'Error: ' + error.message;
+                console.error('Error in fetchSellersJson:', error);
+                progressText.textContent = `Error: ${error.message}`;
                 progressBar.style.backgroundColor = '#ff4444';
-                fetchButton.disabled = false;
+                progressBar.style.width = '100%';
+                
+                setTimeout(() => {
+                    fetchButton.disabled = false;
+                }, 1500);
             }
         }
 
-        // Add click handler for the fetch button
-        document.getElementById('fetchSellersJson').addEventListener('click', function() {
-            console.log('Fetch button clicked');
-            fetchSellersJson();
+        // Replace the event listeners with this simpler version
+        document.addEventListener('DOMContentLoaded', function() {
+            const fetchButton = document.getElementById('fetchSellersJson');
+            if (fetchButton) {
+                fetchButton.addEventListener('click', function() {
+                    console.log('Fetch button clicked');
+                    fetchSellersJson();
+                });
+            } else {
+                console.error('Fetch button not found in DOM');
+            }
         });
-
-        // Alternatively, you can try this direct approach
-        document.getElementById('fetchSellersJson').onclick = function() {
-            console.log('Fetch button clicked (onclick)');
-            fetchSellersJson();
-        };
 
         // Improved CSV parsing function
         function parseCSV(text) {
