@@ -79,81 +79,58 @@
 
         // Add event listener for the fetch button
         document.getElementById('fetchSellersBtn').addEventListener('click', function() {
-            document.getElementById('lastUpdated').textContent = 'Fetching sellers.json...';
+            document.getElementById('lastUpdated').textContent = 'Preparing for sellers.json...';
             
-            // Use a CORS proxy to fetch the sellers.json file
-            const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-            const targetUrl = 'https://lijit.com/sellers.json';
+            // Show instructions for manual input since CORS is blocking direct fetch
+            const instructions = 
+                'Due to browser security restrictions (CORS), we cannot fetch the sellers.json file directly.\n\n' +
+                'Please follow these steps:\n' +
+                '1. Open https://lijit.com/sellers.json in a new tab\n' +
+                '2. Copy the entire content (Ctrl+A then Ctrl+C)\n' +
+                '3. Paste it in the next prompt window (Ctrl+V)';
             
-            // First try with a CORS proxy
-            fetch(proxyUrl + targetUrl)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(handleSellersData)
-                .catch(error => {
-                    console.error('Error fetching with proxy:', error);
+            alert(instructions);
+            
+            const jsonText = prompt('Paste the sellers.json content here:');
+            
+            if (jsonText) {
+                try {
+                    // Try to parse the JSON
+                    const data = JSON.parse(jsonText);
                     
-                    // If proxy fails, show manual input option
-                    const manualInput = confirm(
-                        'Unable to automatically fetch sellers.json due to CORS restrictions.\n\n' +
-                        'Would you like to manually paste the sellers.json content?'
-                    );
-                    
-                    if (manualInput) {
-                        const jsonText = prompt(
-                            'Please go to https://lijit.com/sellers.json in a new tab,\n' +
-                            'copy the entire content, and paste it here:'
-                        );
-                        
-                        if (jsonText) {
-                            try {
-                                const data = JSON.parse(jsonText);
-                                handleSellersData(data);
-                            } catch (e) {
-                                alert('Invalid JSON format. Please try again.');
-                                console.error('JSON parse error:', e);
-                                document.getElementById('lastUpdated').textContent = 'Error parsing sellers.json';
+                    // Process the sellers data
+                    sellersData = {};
+                    if (data && data.sellers && Array.isArray(data.sellers)) {
+                        data.sellers.forEach(entry => {
+                            if (entry.seller_id) {
+                                sellersData[entry.seller_id] = {
+                                    seller_type: entry.seller_type,
+                                    name: entry.name,
+                                    domain: entry.domain
+                                };
                             }
-                        } else {
-                            document.getElementById('lastUpdated').textContent = 'Sellers.json fetch cancelled';
-                        }
+                        });
+                        
+                        // Save to localStorage
+                        localStorage.setItem('sellersData', JSON.stringify(sellersData));
+                        
+                        // Show success message
+                        alert(`Sellers.json successfully loaded with ${data.sellers.length} entries.`);
+                        
+                        // Update the last updated text
+                        const now = new Date();
+                        document.getElementById('lastUpdated').textContent = 
+                            `Sellers Data Updated: ${formatDate(now.toISOString())}`;
                     } else {
-                        document.getElementById('lastUpdated').textContent = 'Sellers.json fetch cancelled';
+                        throw new Error('Invalid sellers.json format');
                     }
-                });
-            
-            // Function to handle the sellers data
-            function handleSellersData(data) {
-                // Process the sellers data
-                sellersData = {};
-                if (data && data.sellers && Array.isArray(data.sellers)) {
-                    data.sellers.forEach(entry => {
-                        if (entry.seller_id) {
-                            sellersData[entry.seller_id] = {
-                                seller_type: entry.seller_type,
-                                name: entry.name,
-                                domain: entry.domain
-                            };
-                        }
-                    });
-                    
-                    // Save to localStorage
-                    localStorage.setItem('sellersData', JSON.stringify(sellersData));
-                    
-                    // Show success message
-                    alert(`Sellers.json successfully loaded with ${data.sellers.length} entries.`);
-                    
-                    // Update the last updated text
-                    const now = new Date();
-                    document.getElementById('lastUpdated').textContent = 
-                        `Sellers Data Updated: ${formatDate(now.toISOString())}`;
-                } else {
-                    throw new Error('Invalid sellers.json format');
+                } catch (e) {
+                    console.error('JSON parse error:', e);
+                    alert('Error: The pasted content is not valid JSON. Please try again and ensure you copy the entire content.');
+                    document.getElementById('lastUpdated').textContent = 'Error parsing sellers.json';
                 }
+            } else {
+                document.getElementById('lastUpdated').textContent = 'Sellers.json import cancelled';
             }
         });
 
