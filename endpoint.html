@@ -9,11 +9,11 @@
 <body>
     <div class="container">
         <div class="header-section">
-            <h1><a href="index.html" style="text-decoration: none; color: inherit;">XSP Alignment Helper</a></h1>
+            <h1>XSP Alignment Helper</h1>
             <div class="view-switcher">
                 <a href="index.html" class="view-link">Bidder View</a>
                 <a href="publisher.html" class="view-link">Publisher View</a>
-                <a href="endpoint.html" class="view-link active">Endpoint View</a>
+                <a href="endpoint.html" class="view-link">Endpoint View</a>
                 <a href="opportunities.html" class="view-link">Opportunities</a>
             </div>
             <div class="last-updated" id="lastUpdated"></div>
@@ -37,39 +37,20 @@
 
         // Load saved data when page loads
         window.addEventListener('load', function() {
-            console.log('Endpoint View: Loading saved data...');
             const savedData = localStorage.getItem('dashboardData');
             const savedSellers = localStorage.getItem('sellersData');
             const savedDate = localStorage.getItem('lastUpdateDate');
             
-            console.log('Endpoint View: Data available in localStorage:', 
-                savedData ? 'dashboardData (yes)' : 'dashboardData (no)',
-                savedSellers ? 'sellersData (yes)' : 'sellersData (no)');
-            
-            if (savedData) {
-                try {
-                    globalData = JSON.parse(savedData);
-                    console.log('Endpoint View: Loaded dashboardData from localStorage:', globalData.length, 'entries');
-                    
-                    if (savedSellers) {
-                        sellersData = JSON.parse(savedSellers);
-                        console.log('Endpoint View: Loaded sellersData from localStorage:', Object.keys(sellersData).length, 'sellers');
-                    } else {
-                        console.log('Endpoint View: No sellersData found in localStorage');
-                    }
-                    
-                    lastUpdateDate = savedDate || '';
-                    
-                    document.getElementById('lastUpdated').textContent = 
-                        `Last Updated: ${formatDate(lastUpdateDate)}`;
-                    updateDropdown();
-                } catch (error) {
-                    console.error('Endpoint View: Error parsing saved data:', error);
-                    document.getElementById('lastUpdated').textContent = 
-                        'Error loading data. Please reload and try again.';
-                }
+            if (savedData && savedSellers) {
+                globalData = JSON.parse(savedData);
+                sellersData = JSON.parse(savedSellers);
+                lastUpdateDate = savedDate;
+                
+                document.getElementById('lastUpdated').textContent = 
+                    `Last Updated: ${formatDate(lastUpdateDate)}`;
+                updateDropdown();
             } else {
-                console.log('Endpoint View: No saved data found in localStorage');
+                // Add message if no data is found in cache
                 document.getElementById('lastUpdated').textContent = 
                     'Please upload data files on the Bidder View page';
             }
@@ -128,76 +109,76 @@
         }
 
         function updateDisplay() {
-            const selectedBidder = document.getElementById('bidderSelect').value;
-            const endpointList = document.getElementById('endpointList');
-            endpointList.innerHTML = '';
+    const selectedBidder = document.getElementById('bidderSelect').value;
+    const endpointList = document.getElementById('endpointList');
+    endpointList.innerHTML = '';
+    
+    if (!selectedBidder) return;
+
+    // Group data by endpoint and publisher
+    const endpointGroups = {};
+    globalData
+        .filter(entry => entry.bidder_name === selectedBidder)
+        .forEach(entry => {
+            const endpoint = entry.endpoint || '';
+            if (!endpointGroups[endpoint]) {
+                endpointGroups[endpoint] = new Map();
+            }
             
-            if (!selectedBidder) return;
-
-            // Group data by endpoint and publisher
-            const endpointGroups = {};
-            globalData
-                .filter(entry => entry.bidder_name === selectedBidder)
-                .forEach(entry => {
-                    const endpoint = entry.endpoint || '';
-                    if (!endpointGroups[endpoint]) {
-                        endpointGroups[endpoint] = new Map();
-                    }
-                    
-                    const publisherKey = `${entry.pub_name}|${entry.pub_id}`;
-                    if (!endpointGroups[endpoint].has(publisherKey)) {
-                        endpointGroups[endpoint].set(publisherKey, {
-                            name: entry.pub_name,
-                            id: entry.pub_id,
-                            pub_type: entry.pub_type || '',
-                            device_types: new Set()
-                        });
-                    }
-                    
-                    if (entry.device_type) {
-                        endpointGroups[endpoint].get(publisherKey).device_types.add(entry.device_type);
-                    }
+            const publisherKey = `${entry.pub_name}|${entry.pub_id}`;
+            if (!endpointGroups[endpoint].has(publisherKey)) {
+                endpointGroups[endpoint].set(publisherKey, {
+                    name: entry.pub_name,
+                    id: entry.pub_id,
+                    pub_type: entry.pub_type || '',
+                    device_types: new Set()
                 });
+            }
+            
+            if (entry.device_type) {
+                endpointGroups[endpoint].get(publisherKey).device_types.add(entry.device_type);
+            }
+        });
 
-            // Display endpoints and their publishers
-            Object.entries(endpointGroups)
-                .sort(([a], [b]) => a.localeCompare(b))
-                .forEach(([endpoint, publishers]) => {
-                    const publisherArray = Array.from(publishers.values())
-                        .sort((a, b) => a.name.localeCompare(b.name));
+    // Display endpoints and their publishers
+    Object.entries(endpointGroups)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .forEach(([endpoint, publishers]) => {
+            const publisherArray = Array.from(publishers.values())
+                .sort((a, b) => a.name.localeCompare(b.name));
 
-                    const section = document.createElement('div');
-                    section.className = 'endpoint-section';
-                    section.innerHTML = `
-                        <div class="endpoint-header">
-                            ${endpoint}
-                            <span class="endpoint-count">(${publisherArray.length} publishers)</span>
-                        </div>
-                        <div class="publisher-list">
-                            <div class="publisher-list-header">
-                                <div class="publisher-list-name">Publisher Name</div>
-                                <div class="publisher-id">Publisher ID</div>
-                                <div class="publisher-type">Type</div>
-                                <div class="device-type">Device Types</div>
+            const section = document.createElement('div');
+            section.className = 'endpoint-section';
+            section.innerHTML = `
+                <div class="endpoint-header">
+                    ${endpoint}
+                    <span class="endpoint-count">(${publisherArray.length} publishers)</span>
+                </div>
+                <div class="publisher-list">
+                    <div class="publisher-list-header">
+                        <div class="publisher-list-name">Publisher Name</div>
+                        <div class="publisher-id">Publisher ID</div>
+                        <div class="publisher-type">Type</div>
+                        <div class="device-type">Device Types</div>
+                    </div>
+                    ${publisherArray.map(pub => `
+                        <div class="publisher-item">
+                            <div class="publisher-list-name">${pub.name}</div>
+                            <div class="publisher-id">${pub.id}</div>
+                            <div class="publisher-type">${pub.pub_type}</div>
+                            <div class="device-type">
+                                ${Array.from(pub.device_types)
+                                    .sort()
+                                    .map(device => `<span class="device-type-tag">${device}</span>`)
+                                    .join('')}
                             </div>
-                            ${publisherArray.map(pub => `
-                                <div class="publisher-item">
-                                    <div class="publisher-list-name">${pub.name}</div>
-                                    <div class="publisher-id">${pub.id}</div>
-                                    <div class="publisher-type">${pub.pub_type}</div>
-                                    <div class="device-type">
-                                        ${Array.from(pub.device_types)
-                                            .sort()
-                                            .map(device => `<span class="device-type-tag">${device}</span>`)
-                                            .join('')}
-                                    </div>
-                                </div>
-                            `).join('')}
                         </div>
-                    `;
-                    endpointList.appendChild(section);
-                });
-        }
+                    `).join('')}
+                </div>
+            `;
+            endpointList.appendChild(section);
+        });
+}
 
         // Scroll-to-top functionality
         document.addEventListener('DOMContentLoaded', function() {

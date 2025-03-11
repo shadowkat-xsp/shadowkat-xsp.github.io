@@ -9,10 +9,10 @@
 <body>
     <div class="container">
         <div class="header-section">
-            <h1><a href="index.html" style="text-decoration: none; color: inherit;">XSP Alignment Helper</a></h1>
+            <h1>XSP Alignment Helper</h1>
             <div class="view-switcher">
                 <a href="index.html" class="view-link">Bidder View</a>
-                <a href="publisher.html" class="view-link active">Publisher View</a>
+                <a href="publisher.html" class="view-link">Publisher View</a>
                 <a href="endpoint.html" class="view-link">Endpoint View</a>
                 <a href="opportunities.html" class="view-link">Opportunities</a>
             </div>
@@ -22,8 +22,6 @@
         <select id="publisherSelect" onchange="updateDisplay()">
             <option value="">Select a Publisher</option>
         </select>
-        
-        <input type="text" id="searchBox" class="search-box" placeholder="Search bidders..." onkeyup="filterBidders()">
         
         <div id="bidderList"></div>
     </div>
@@ -284,41 +282,18 @@
 
         // Load data from localStorage when page loads
         window.addEventListener('load', function() {
-            console.log('Publisher View: Loading saved data...');
             const savedData = localStorage.getItem('dashboardData');
             const savedSellers = localStorage.getItem('sellersData');
             const savedDate = localStorage.getItem('lastUpdateDate');
             
-            console.log('Publisher View: Data available in localStorage:', 
-                savedData ? 'dashboardData (yes)' : 'dashboardData (no)',
-                savedSellers ? 'sellersData (yes)' : 'sellersData (no)');
-            
-            if (savedData) {
-                try {
-                    globalData = JSON.parse(savedData);
-                    console.log('Publisher View: Loaded dashboardData from localStorage:', globalData.length, 'entries');
-                    
-                    if (savedSellers) {
-                        sellersData = JSON.parse(savedSellers);
-                        console.log('Publisher View: Loaded sellersData from localStorage:', Object.keys(sellersData).length, 'sellers');
-                    } else {
-                        console.log('Publisher View: No sellersData found in localStorage');
-                    }
-                    
-                    lastUpdateDate = savedDate || '';
-                    
-                    document.getElementById('lastUpdated').textContent = 
-                        `Last Updated: ${formatDate(lastUpdateDate)}`;
-                    updateDropdown();
-                } catch (error) {
-                    console.error('Publisher View: Error parsing saved data:', error);
-                    document.getElementById('lastUpdated').textContent = 
-                        'Error loading data. Please reload and try again.';
-                }
-            } else {
-                console.log('Publisher View: No saved data found in localStorage');
+            if (savedData && savedSellers) {
+                globalData = JSON.parse(savedData);
+                sellersData = JSON.parse(savedSellers);
+                lastUpdateDate = savedDate;
+                
                 document.getElementById('lastUpdated').textContent = 
-                    'Please upload data files on the Bidder View page';
+                    `Last Updated: ${formatDate(lastUpdateDate)}`;
+                updateDropdown();
             }
         });
 
@@ -333,7 +308,6 @@
         }
 
         function findSellerInfo(pub_id) {
-            if (!pub_id || !sellersData) return null;
             return sellersData[pub_id] || null;
         }
 
@@ -469,17 +443,6 @@
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             });
         });
-
-        // Add search functionality for publisher.html
-        function filterBidders() {
-            const searchText = document.getElementById('searchBox').value.toLowerCase();
-            const bidderGroups = document.getElementsByClassName('publisher-group');
-            
-            Array.from(bidderGroups).forEach(group => {
-                const text = group.textContent.toLowerCase();
-                group.style.display = text.includes(searchText) ? '' : 'none';
-            });
-        }
     </script>
 </body>
 </html>
