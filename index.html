@@ -111,12 +111,11 @@
             fetchButton.disabled = true;
             progressBar.style.width = '0%';
             progressText.textContent = 'Fetching sellers.json...';
-            progressBar.style.backgroundColor = '#4CAF50'; // Reset color
+            progressBar.style.backgroundColor = '#4CAF50';
 
             try {
-                // Direct fetch without proxy
-                console.log('Fetching sellers.json data...');
                 const response = await fetch('https://lijit.com/sellers.json', {
+                    mode: 'no-cors',
                     headers: {
                         'Accept': 'application/json'
                     }
