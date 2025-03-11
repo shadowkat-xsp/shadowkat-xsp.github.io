@@ -223,7 +223,16 @@
         }
 
         // Add click handler for the fetch button
-        document.getElementById('fetchSellersJson').addEventListener('click', fetchSellersJson);
+        document.getElementById('fetchSellersJson').addEventListener('click', function() {
+            console.log('Fetch button clicked');
+            fetchSellersJson();
+        });
+
+        // Alternatively, you can try this direct approach
+        document.getElementById('fetchSellersJson').onclick = function() {
+            console.log('Fetch button clicked (onclick)');
+            fetchSellersJson();
+        };
 
         // Improved CSV parsing function
         function parseCSV(text) {
@@ -312,6 +321,8 @@
                     `Last Updated: ${formatDate(lastUpdateDate)}`;
                 updateDropdown();
             }
+
+            console.log('Fetch button exists:', !!document.getElementById('fetchSellersJson'));
         });
 
         function updateDropdown() {
