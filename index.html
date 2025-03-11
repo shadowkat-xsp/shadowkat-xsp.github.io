@@ -25,8 +25,7 @@
                 <input type="file" id="dataFile" accept=".csv" class="file-input">
             </div>
             <div>
-                <label for="sellersFile">Upload Sellers CSV:</label>
-                <input type="file" id="sellersFile" accept=".csv" class="file-input">
+                <button id="fetchSellersBtn" class="button">Fetch Sellers.json</button>
             </div>
         </div>
 
@@ -78,32 +77,51 @@
             reader.readAsText(file);
         });
 
-        document.getElementById('sellersFile').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
+        // Add event listener for the fetch button
+        document.getElementById('fetchSellersBtn').addEventListener('click', function() {
+            document.getElementById('lastUpdated').textContent = 'Fetching sellers.json...';
             
-            reader.onload = function(e) {
-                const text = e.target.result;
-                const parsedData = parseCSV(text);
-                
-                sellersData = {};
-                parsedData.forEach(entry => {
-                    if (entry.seller_id) {
-                        sellersData[entry.seller_id] = {
-                            seller_type: entry.seller_type,
-                            name: entry.name,
-                            domain: entry.domain
-                        };
+            // Fetch the sellers.json file from the Lijit endpoint
+            fetch('https://lijit.com/sellers.json')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
                     }
+                    return response.json();
+                })
+                .then(data => {
+                    // Process the sellers data
+                    sellersData = {};
+                    if (data && data.sellers && Array.isArray(data.sellers)) {
+                        data.sellers.forEach(entry => {
+                            if (entry.seller_id) {
+                                sellersData[entry.seller_id] = {
+                                    seller_type: entry.seller_type,
+                                    name: entry.name,
+                                    domain: entry.domain
+                                };
+                            }
+                        });
+                        
+                        // Save to localStorage
+                        localStorage.setItem('sellersData', JSON.stringify(sellersData));
+                        
+                        // Show success message
+                        alert(`Sellers.json successfully loaded with ${data.sellers.length} entries.`);
+                        
+                        // Update the last updated text
+                        const now = new Date();
+                        document.getElementById('lastUpdated').textContent = 
+                            `Sellers Data Updated: ${formatDate(now.toISOString())}`;
+                    } else {
+                        throw new Error('Invalid sellers.json format');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching sellers.json:', error);
+                    alert('Error fetching sellers.json. Please try again later.');
+                    document.getElementById('lastUpdated').textContent = 'Error fetching sellers.json';
                 });
-                
-                localStorage.setItem('sellersData', JSON.stringify(sellersData));
-                
-                // Show success message
-                alert('Sellers data successfully loaded and saved.');
-            };
-            
-            reader.readAsText(file);
         });
 
         // Improved CSV parsing function
