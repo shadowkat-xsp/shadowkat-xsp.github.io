@@ -102,11 +102,14 @@
                 try {
                     progressText.textContent = 'Trying direct fetch...';
                     response = await fetch('https://lijit.com/sellers.json');
+                    console.log('Direct fetch response:', response.status, response.statusText);
                     if (response.ok) {
                         data = await response.json();
+                    } else {
+                        throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
                     }
                 } catch (e) {
-                    console.log('Direct fetch failed:', e);
+                    console.log('Direct fetch failed:', e.message);
                     error = e;
                 }
 
@@ -114,12 +117,26 @@
                 if (!data) {
                     try {
                         progressText.textContent = 'Trying CORS proxy...';
-                        response = await fetch('https://api.allorigins.win/raw?url=https://lijit.com/sellers.json');
+                        const proxyUrl = 'https://api.allorigins.win/raw?url=https://lijit.com/sellers.json';
+                        console.log('Trying proxy:', proxyUrl);
+                        response = await fetch(proxyUrl);
+                        console.log('Proxy response:', response.status, response.statusText);
+                        
                         if (response.ok) {
-                            data = await response.json();
+                            const text = await response.text();
+                            console.log('Response text length:', text.length);
+                            try {
+                                data = JSON.parse(text);
+                            } catch (parseError) {
+                                console.error('JSON parse error:', parseError);
+                                console.log('First 100 chars of response:', text.substring(0, 100));
+                                throw new Error('Invalid JSON response from proxy');
+                            }
+                        } else {
+                            throw new Error(`Proxy HTTP error: ${response.status} ${response.statusText}`);
                         }
                     } catch (e) {
-                        console.log('CORS proxy failed:', e);
+                        console.log('CORS proxy failed:', e.message);
                         error = e;
                     }
                 }
@@ -128,12 +145,26 @@
                 if (!data) {
                     try {
                         progressText.textContent = 'Trying alternate proxy...';
-                        response = await fetch('https://corsproxy.io/?https://lijit.com/sellers.json');
+                        const proxyUrl = 'https://corsproxy.io/?https://lijit.com/sellers.json';
+                        console.log('Trying alternate proxy:', proxyUrl);
+                        response = await fetch(proxyUrl);
+                        console.log('Alternate proxy response:', response.status, response.statusText);
+                        
                         if (response.ok) {
-                            data = await response.json();
+                            const text = await response.text();
+                            console.log('Response text length:', text.length);
+                            try {
+                                data = JSON.parse(text);
+                            } catch (parseError) {
+                                console.error('JSON parse error:', parseError);
+                                console.log('First 100 chars of response:', text.substring(0, 100));
+                                throw new Error('Invalid JSON response from alternate proxy');
+                            }
+                        } else {
+                            throw new Error(`Alt proxy HTTP error: ${response.status} ${response.statusText}`);
                         }
                     } catch (e) {
-                        console.log('Alternate proxy failed:', e);
+                        console.log('Alternate proxy failed:', e.message);
                         error = e;
                     }
                 }
@@ -185,10 +216,9 @@
                 
             } catch (error) {
                 console.error('Error fetching sellers.json:', error);
-                progressText.textContent = 'Error loading data';
+                progressText.textContent = 'Error: ' + error.message;
                 progressBar.style.backgroundColor = '#ff4444';
                 fetchButton.disabled = false;
-                alert('Error loading sellers.json. Please try again.');
             }
         }
 
