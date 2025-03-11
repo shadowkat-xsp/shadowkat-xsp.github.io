@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>XSP Alignment Helper</title>
     <link rel="stylesheet" href="styles.css">
-    <script id="sellersJsonData" type="application/json">
-        // Paste the sellers.json content here
-    </script>
 </head>
 <body>
     <div class="container">
@@ -58,117 +55,60 @@
         // File input handlers
         document.getElementById('dataFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
-            if (!file) {
-                console.error('No file selected');
-                return;
-            }
-            
             const reader = new FileReader();
             
-            // Using arrow function to avoid 'this' context issues
-            reader.onload = (e) => {
-                try {
-                    const text = e.target.result;
-                    globalData = parseCSV(text);
-                    console.log('Parsed data entries:', globalData.length);
-                    
-                    lastUpdateDate = globalData
-                        .map(entry => entry.date_only)
-                        .filter(date => date && date.trim())
-                        .sort()
-                        .pop();
-                    
-                    // Store data in localStorage
-                    localStorage.setItem('dashboardData', JSON.stringify(globalData));
-                    localStorage.setItem('lastUpdateDate', lastUpdateDate);
-                    console.log('Data saved to localStorage:', globalData.length, 'entries');
-                    
-                    document.getElementById('lastUpdated').textContent = 
-                        `Last Updated: ${formatDate(lastUpdateDate)}`;
-                    
-                    updateDropdown();
-                } catch (error) {
-                    console.error('Error processing file:', error);
-                    alert('Error processing file: ' + error.message);
-                }
-            };
-            
-            // Add error handler for the file reader
-            reader.onerror = (error) => {
-                console.error('Error reading file:', error);
-                alert('Error reading file. Please try again.');
+            reader.onload = function(e) {
+                const text = e.target.result;
+                globalData = parseCSV(text);
+                console.log('First parsed entry:', globalData[0]); // Debug log
+                
+                lastUpdateDate = globalData
+                    .map(entry => entry.date_only)
+                    .filter(date => date && date.trim())
+                    .sort()
+                    .pop();
+                
+                localStorage.setItem('dashboardData', JSON.stringify(globalData));
+                localStorage.setItem('lastUpdateDate', lastUpdateDate);
+                
+                document.getElementById('lastUpdated').textContent = 
+                    `Last Updated: ${formatDate(lastUpdateDate)}`;
+                
+                updateDropdown();
             };
             
             reader.readAsText(file);
         });
 
-        // Add new function to fetch sellers.json with enhanced error handling
+        // Add new function to fetch sellers.json
         async function fetchSellersJson() {
             const progressContainer = document.getElementById('progressContainer');
             const progressBar = document.getElementById('progressBar');
             const progressText = document.getElementById('progressText');
             const fetchButton = document.getElementById('fetchSellersJson');
 
-            // Reset UI
-            progressContainer.style.display = 'block';
-            fetchButton.disabled = true;
-            progressBar.style.width = '0%';
-            progressText.textContent = 'Loading sellers.json...';
-            progressBar.style.backgroundColor = '#4CAF50';
-
             try {
-                // Check if we have cached data that's not expired
-                const cachedData = localStorage.getItem('sellersJsonData');
-                const lastFetch = localStorage.getItem('sellersJsonLastFetch');
-                const now = new Date().getTime();
-                const oneDayMs = 24 * 60 * 60 * 1000;
+                progressContainer.style.display = 'block';
+                fetchButton.disabled = true;
+                progressBar.style.width = '0%';
+                progressText.textContent = 'Fetching sellers.json...';
 
-                if (cachedData && lastFetch && (now - parseInt(lastFetch) < oneDayMs)) {
-                    sellersData = JSON.parse(cachedData);
-                    progressBar.style.width = '100%';
-                    progressText.textContent = 'Loaded from cache!';
-                    setTimeout(() => {
-                        progressContainer.style.display = 'none';
-                        fetchButton.disabled = false;
-                    }, 1000);
-                    return;
-                }
-
-                // If cache is expired or doesn't exist, fetch new data
-                progressText.textContent = 'Fetching fresh data...';
+                // Fetch the sellers.json with a proxy to avoid CORS issues
+                const response = await fetch('https://api.allorigins.win/raw?url=https://lijit.com/sellers.json');
                 
-                // Try different endpoints until one works
-                const endpoints = [
-                    'https://sellers.sovrn.com/sellers.json',
-                    'https://cdn.sovrn.com/sellers.json',
-                    'https://lijit.com/sellers.json'
-                ];
-
-                let response = null;
-                let error = null;
-
-                for (const endpoint of endpoints) {
-                    try {
-                        response = await fetch(endpoint);
-                        if (response.ok) break;
-                    } catch (e) {
-                        error = e;
-                        continue;
-                    }
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
                 }
 
-                if (!response?.ok) {
-                    throw error || new Error('Failed to fetch sellers.json from all endpoints');
-                }
-
+                // Update progress to show we've started receiving data
                 progressBar.style.width = '50%';
-                progressText.textContent = 'Processing data...';
+                progressText.textContent = 'Parsing data...';
 
                 const data = await response.json();
                 
-                if (!data?.sellers) {
-                    throw new Error('Invalid sellers.json format');
-                }
+                // Update progress to show we've parsed the JSON
+                progressBar.style.width = '75%';
+                progressText.textContent = 'Processing sellers...';
 
                 // Process the sellers data
                 sellersData = data.sellers.reduce((acc, seller) => {
@@ -176,23 +116,28 @@
                     return acc;
                 }, {});
 
-                // Cache the new data with timestamp
-                localStorage.setItem('sellersJsonData', JSON.stringify(sellersData));
-                localStorage.setItem('sellersJsonLastFetch', now.toString());
-
+                // Complete the progress bar
                 progressBar.style.width = '100%';
                 progressText.textContent = 'Complete!';
-                
+
+                // Store in localStorage for persistence
+                localStorage.setItem('sellersData', JSON.stringify(sellersData));
+
+                // Update the UI to show success
                 setTimeout(() => {
                     progressContainer.style.display = 'none';
                     fetchButton.disabled = false;
+                    alert('Sellers.json data loaded successfully!');
                 }, 1000);
 
+                console.log('Sellers.json loaded:', Object.keys(sellersData).length, 'sellers');
+                
             } catch (error) {
-                console.error('Error loading sellers.json:', error);
-                progressText.textContent = 'Error: ' + error.message;
+                console.error('Error fetching sellers.json:', error);
+                progressText.textContent = 'Error loading data';
                 progressBar.style.backgroundColor = '#ff4444';
                 fetchButton.disabled = false;
+                alert('Error loading sellers.json. Please try again.');
             }
         }
 
@@ -268,45 +213,23 @@
         }
 
         function findSellerInfo(pub_id) {
-            if (!pub_id || !sellersData) return null;
             return sellersData[pub_id] || null;
         }
 
         // Load saved data when page loads
         window.addEventListener('load', function() {
-            console.log('Main page: Loading saved data...');
             const savedData = localStorage.getItem('dashboardData');
             const savedSellers = localStorage.getItem('sellersData');
             const savedDate = localStorage.getItem('lastUpdateDate');
             
-            console.log('Main page: Data available in localStorage:', 
-                savedData ? 'dashboardData (yes)' : 'dashboardData (no)',
-                savedSellers ? 'sellersData (yes)' : 'sellersData (no)');
-            
-            if (savedData) {
-                try {
-                    globalData = JSON.parse(savedData);
-                    console.log('Main page: Loaded dashboardData from localStorage:', globalData.length, 'entries');
-                    
-                    if (savedSellers) {
-                        sellersData = JSON.parse(savedSellers);
-                        console.log('Main page: Loaded sellersData from localStorage:', Object.keys(sellersData).length, 'sellers');
-                    } else {
-                        console.log('Main page: No sellersData found in localStorage');
-                    }
-                    
-                    lastUpdateDate = savedDate || '';
-                    
-                    document.getElementById('lastUpdated').textContent = 
-                        `Last Updated: ${formatDate(lastUpdateDate)}`;
-                    updateDropdown();
-                } catch (error) {
-                    console.error('Main page: Error parsing saved data:', error);
-                    document.getElementById('lastUpdated').textContent = 
-                        'Error loading data. Please reload and try again.';
-                }
-            } else {
-                console.log('Main page: No saved data found in localStorage');
+            if (savedData && savedSellers) {
+                globalData = JSON.parse(savedData);
+                sellersData = JSON.parse(savedSellers);
+                lastUpdateDate = savedDate;
+                
+                document.getElementById('lastUpdated').textContent = 
+                    `Last Updated: ${formatDate(lastUpdateDate)}`;
+                updateDropdown();
             }
         });
 
