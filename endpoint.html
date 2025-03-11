@@ -41,14 +41,24 @@
             const savedSellers = localStorage.getItem('sellersData');
             const savedDate = localStorage.getItem('lastUpdateDate');
             
-            if (savedData && savedSellers) {
-                globalData = JSON.parse(savedData);
-                sellersData = JSON.parse(savedSellers);
-                lastUpdateDate = savedDate;
-                
-                document.getElementById('lastUpdated').textContent = 
-                    `Last Updated: ${formatDate(lastUpdateDate)}`;
-                updateDropdown();
+            if (savedData) {
+                try {
+                    globalData = JSON.parse(savedData);
+                    
+                    if (savedSellers) {
+                        sellersData = JSON.parse(savedSellers);
+                    }
+                    
+                    lastUpdateDate = savedDate || '';
+                    
+                    document.getElementById('lastUpdated').textContent = 
+                        `Last Updated: ${formatDate(lastUpdateDate)}`;
+                    updateDropdown();
+                } catch (error) {
+                    console.error('Error parsing saved data:', error);
+                    document.getElementById('lastUpdated').textContent = 
+                        'Error loading data. Please reload and try again.';
+                }
             } else {
                 // Add message if no data is found in cache
                 document.getElementById('lastUpdated').textContent = 

@@ -70,6 +70,9 @@
                     `Last Updated: ${formatDate(lastUpdateDate)}`;
                 
                 updateDropdown();
+                
+                // Show success message
+                alert('Data successfully loaded and saved. You can now navigate to other views.');
             };
             
             reader.readAsText(file);
@@ -95,6 +98,9 @@
                 });
                 
                 localStorage.setItem('sellersData', JSON.stringify(sellersData));
+                
+                // Show success message
+                alert('Sellers data successfully loaded and saved.');
             };
             
             reader.readAsText(file);
