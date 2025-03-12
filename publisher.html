@@ -23,6 +23,8 @@
             <option value="">Select a Publisher</option>
         </select>
         
+        <input type="text" id="searchBox" class="search-box" placeholder="Search bidders..." onkeyup="filterBidders()">
+        
         <div id="bidderList"></div>
     </div>
 
@@ -456,6 +458,26 @@
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             });
         });
+
+        // Add this function to filter bidders
+        function filterBidders() {
+            const searchText = document.getElementById('searchBox').value.toLowerCase();
+            const publisherGroups = document.getElementsByClassName('publisher-group');
+            
+            // Skip the first group which contains publisher info
+            for (let i = 1; i < publisherGroups.length; i++) {
+                const group = publisherGroups[i];
+                const bidderName = group.querySelector('.publisher-name').textContent.toLowerCase();
+                const bidderInfo = group.querySelector('.bidder-notes') ? 
+                    group.querySelector('.bidder-notes').textContent.toLowerCase() : '';
+                
+                if (bidderName.includes(searchText) || bidderInfo.includes(searchText)) {
+                    group.style.display = '';
+                } else {
+                    group.style.display = 'none';
+                }
+            }
+        }
     </script>
 </body>
 </html>
