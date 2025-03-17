@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XSP Alignment Helper - App-Ads Compliance</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .compliance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        
+        .compliance-table th {
+            background-color: #f2f2f2;
+            padding: 10px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border: 1px solid #ddd;
+        }
+        
+        .compliance-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .compliance-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .compliance-table tr:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .table-container {
+            max-height: 600px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .loading-indicator {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            font-size: 16px;
+            color: #666;
+        }
+        
+        .progress-bar-container {
+            width: 100%;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 20px;
+            background-color: #4CAF50;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .stats-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-card {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .stat-title {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .filter-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-section">
+            <h1><a href="index.html" style="text-decoration: none; color: inherit;">XSP Alignment Helper</a></h1>
+            <div class="view-switcher">
+                <a href="index.html" class="view-link">Bidder View</a>
+                <a href="publisher.html" class="view-link">Publisher View</a>
+                <a href="endpoint.html" class="view-link">Endpoint View</a>
+                <a href="opportunities.html" class="view-link">Opportunities</a>
+                <a href="app-ads-compliance.html" class="view-link active">App-Ads Compliance</a>
+            </div>
+            <div class="last-updated" id="lastUpdated"></div>
+        </div>
+
+        <div class="file-inputs">
+            <div>
+                <label for="complianceFile">Upload App-Ads Compliance CSV:</label>
+                <input type="file" id="complianceFile" accept=".csv" class="file-input">
+            </div>
+        </div>
+
+        <div id="loadingIndicator" class="loading-indicator">
+            <p>Processing file... This may take a few moments for large files.</p>
+            <div class="progress-bar-container">
+                <div id="progressBar" class="progress-bar"></div>
+            </div>
+            <p id="progressText">0%</p>
+        </div>
+
+        <div id="dataControls" style="display: none;">
+            <select id="bidderSelect" onchange="filterData()">
+                <option value="">All Bidders</option>
+            </select>
+            
+            <input type="text" id="searchBox" class="search-box" placeholder="Search..." onkeyup="filterData()">
+            
+            <div class="filter-container">
+                <div class="filter-item">
+                    <input type="checkbox" id="filterErrors" onchange="filterData()">
+                    <label for="filterErrors">Show Errors Only</label>
+                </div>
+                <div class="filter-item">
+                    <input type="checkbox" id="filterAligned" onchange="filterData()">
+                    <label for="filterAligned">Show Aligned Only</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-container" id="statsContainer" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-title">Total Records</div>
+                <div class="stat-value" id="totalRecords">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Records with Errors</div>
+                <div class="stat-value" id="errorRecords">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Aligned Records</div>
+                <div class="stat-value" id="alignedRecords">0</div>
+            </div>
+        </div>
+
+        <div class="table-container" id="tableContainer" style="display: none;">
+            <table class="compliance-table" id="complianceTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Bidder</th>
+                        <th>Publisher</th>
+                        <th>Publisher ID</th>
+                        <th>App Identifier</th>
+                        <th>Domain</th>
+                        <th>Error</th>
+                        <th>Aligned</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Data will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <a href="#" class="scroll-top" id="scrollTop">↑</a>
+
+    <script>
+        let complianceData = [];
+        let filteredData = [];
+        let lastUpdateDate = '';
+        const PAGE_SIZE = 1000; // Number of rows to render at once
+        let currentPage = 0;
+        
+        // File input handler with streaming parser for large files
+        document.getElementById('complianceFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Reset data
+            complianceData = [];
+            filteredData = [];
+            currentPage = 0;
+            
+            // Show loading indicator
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            loadingIndicator.style.display = 'block';
+            document.getElementById('dataControls').style.display = 'none';
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('statsContainer').style.display = 'none';
+            
+            // Use FileReader to read the file in chunks
+            const chunkSize = 10 * 1024 * 1024; // 10MB chunks
+            let offset = 0;
+            let lineBuffer = '';
+            let headers = [];
+            let firstChunk = true;
+            let totalSize = file.size;
+            
+            function readNextChunk() {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const chunk = e.target.result;
+                    processChunk(chunk);
+                    
+                    // Update progress
+                    offset += chunk.length;
+                    const progress = Math.min(100, Math.round((offset / totalSize) * 100));
+                    progressBar.style.width = progress + '%';
+                    progressText.textContent = progress + '%';
+                    
+                    if (offset < file.size) {
+                        readNextChunk();
+                    } else {
+                        // Finished reading file
+                        if (lineBuffer.trim()) {
+                            processLine(lineBuffer);
+                        }
+                        
+                        finishProcessing();
+                    }
+                };
+                
+                const slice = file.slice(offset, offset + chunkSize);
+                reader.readAsText(slice);
+            }
+            
+            function processChunk(chunk) {
+                // Combine with leftover from previous chunk
+                const text = lineBuffer + chunk;
+                const lines = text.split('\n');
+                
+                // Save the last partial line for the next chunk
+                lineBuffer = lines.pop() || '';
+                
+                // Process each complete line
+                for (let i = 0; i < lines.length; i++) {
+                    if (firstChunk && i === 0) {
+                        // This is the header row
+                        headers = parseCSVLine(lines[i]);
+                        firstChunk = false;
+                    } else {
+                        processLine(lines[i]);
+                    }
+                }
+            }
+            
+            function processLine(line) {
+                if (!line.trim()) return;
+                
+                const values = parseCSVLine(line);
+                if (values.length !== headers.length) {
+                    console.warn('Line has incorrect number of fields:', line);
+                    return;
+                }
+                
+                const entry = {};
+                headers.forEach((header, index) => {
+                    entry[header] = values[index] || '';
+                });
+                
+                complianceData.push(entry);
+            }
+            
+            function parseCSVLine(line) {
+                const values = [];
+                let insideQuotes = false;
+                let currentValue = '';
+                
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    
+                    if (char === '"') {
+                        if (insideQuotes && line[i + 1] === '"') {
+                            // Escaped quote
+                            currentValue += '"';
+                            i++;
+                        } else {
+                            // Toggle quote state
+                            insideQuotes = !insideQuotes;
+                        }
+                    } else if (char === ',' && !insideQuotes) {
+                        // End of field
+                        values.push(currentValue);
+                        currentValue = '';
+                    } else {
+                        currentValue += char;
+                    }
+                }
+                
+                // Add the last field
+                values.push(currentValue);
+                return values;
+            }
+            
+            function finishProcessing() {
+                // Hide loading indicator
+                loadingIndicator.style.display = 'none';
+                
+                // Update last updated date
+                lastUpdateDate = new Date().toISOString();
+                document.getElementById('lastUpdated').textContent = 
+                    `Last Updated: ${formatDate(lastUpdateDate)}`;
+                
+                // Populate bidder dropdown
+                updateBidderDropdown();
+                
+                // Show controls and table
+                document.getElementById('dataControls').style.display = 'block';
+                document.getElementById('tableContainer').style.display = 'block';
+                document.getElementById('statsContainer').style.display = 'flex';
+                
+                // Initial filtering and display
+                filterData();
+                
+                // Show success message
+                alert(`Successfully processed ${complianceData.length.toLocaleString()} records.`);
+            }
+            
+            // Start reading the file
+            readNextChunk();
+        });
+        
+        function updateBidderDropdown() {
+            const bidders = [...new Set(complianceData
+                .filter(entry => entry.Bidder_Name)
+                .map(entry => entry.Bidder_Name))];
+            
+            const bidderSelect = document.getElementById('bidderSelect');
+            bidderSelect.innerHTML = '<option value="">All Bidders</option>';
+            bidders.sort().forEach(bidder => {
+                if (bidder) {
+                    bidderSelect.innerHTML += `<option value="${bidder}">${bidder}</option>`;
+                }
+            });
+        }
+        
+        function filterData() {
+            const selectedBidder = document.getElementById('bidderSelect').value;
+            const searchText = document.getElementById('searchBox').value.toLowerCase();
+            const showErrorsOnly = document.getElementById('filterErrors').checked;
+            const showAlignedOnly = document.getElementById('filterAligned').checked;
+            
+            // Filter the data
+            filteredData = complianceData.filter(entry => {
+                // Bidder filter
+                if (selectedBidder && entry.Bidder_Name !== selectedBidder) {
+                    return false;
+                }
+                
+                // Error filter
+                if (showErrorsOnly && !entry.ErrorCode) {
+                    return false;
+                }
+                
+                // Aligned filter
+                if (showAlignedOnly && entry.Aligned !== "1" && entry.Aligned !== "true" && entry.Aligned !== "yes") {
+                    return false;
+                }
+                
+                // Search filter
+                if (searchText) {
+                    const searchFields = [
+                        entry.pub_name, 
+                        entry.pub_id, 
+                        entry.AppIdentifier, 
+                        entry.DomainName, 
+                        entry.ErrorMessage
+                    ];
+                    
+                    return searchFields.some(field => 
+                        field && field.toLowerCase().includes(searchText)
+                    );
+                }
+                
+                return true;
+            });
+            
+            // Reset pagination
+            currentPage = 0;
+            
+            // Update stats
+            updateStats();
+            
+            // Render the first page
+            renderTable();
+        }
+        
+        function updateStats() {
+            document.getElementById('totalRecords').textContent = complianceData.length.toLocaleString();
+            
+            const errorCount = complianceData.filter(entry => entry.ErrorCode).length;
+            document.getElementById('errorRecords').textContent = errorCount.toLocaleString();
+            
+            const alignedCount = complianceData.filter(entry => 
+                entry.Aligned === "1" || entry.Aligned === "true" || entry.Aligned === "yes"
+            ).length;
+            document.getElementById('alignedRecords').textContent = alignedCount.toLocaleString();
+        }
+        
+        function renderTable() {
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+            
+            // Calculate start and end indices for current page
+            const start = currentPage * PAGE_SIZE;
+            const end = Math.min(start + PAGE_SIZE, filteredData.length);
+            
+            // Render only the current page of data
+            for (let i = start; i < end; i++) {
+                const entry = filteredData[i];
+                const row = document.createElement('tr');
+                
+                // Format date
+                const dateStr = entry.DateTime ? formatDate(entry.DateTime) : '';
+                
+                // Determine if aligned
+                const isAligned = entry.Aligned === "1" || entry.Aligned === "true" || entry.Aligned === "yes";
+                
+                row.innerHTML = `
+                    <td>${dateStr}</td>
+                    <td>${entry.Bidder_Name || ''}</td>
+                    <td>${entry.pub_name || ''}</td>
+                    <td>${entry.pub_id || ''}</td>
+                    <td>${entry.AppIdentifier || ''}</td>
+                    <td>${entry.DomainName || ''}</td>
+                    <td title="${entry.ErrorMessage || ''}">${entry.ErrorCode || ''}</td>
+                    <td>${isAligned ? '✓' : '✗'}</td>
+                `;
+                
+                // Add error highlighting
+                if (entry.ErrorCode) {
+                    row.style.backgroundColor = '#ffebee';
+                }
+                
+                // Add aligned highlighting
+                if (isAligned) {
+                    row.querySelector('td:last-child').style.color = '#4caf50';
+                    row.querySelector('td:last-child').style.fontWeight = 'bold';
+                } else {
+                    row.querySelector('td:last-child').style.color = '#f44336';
+                }
+                
+                tableBody.appendChild(row);
+            }
+            
+            // Add load more button if needed
+            if (end < filteredData.length) {
+                const loadMoreRow = document.createElement('tr');
+                loadMoreRow.innerHTML = `
+                    <td colspan="8" style="text-align: center; padding: 15px;">
+                        <button id="loadMoreBtn" class="button">
+                            Load More (Showing ${end} of ${filteredData.length})
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(loadMoreRow);
+                
+                document.getElementById('loadMoreBtn').addEventListener('click', function() {
+                    currentPage++;
+                    renderTable();
+                });
+            }
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            
+            try {
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+            } catch (e) {
+                return dateStr;
+            }
+        }
+        
+        // Scroll-to-top functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const scrollButton = document.getElementById('scrollTop');
+            
+            window.addEventListener('scroll', function() {
+                if (window.pageYOffset > 300) {
+                    scrollButton.classList.add('visible');
+                } else {
+                    scrollButton.classList.remove('visible');
+                }
+            });
+
+            scrollButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html> 
