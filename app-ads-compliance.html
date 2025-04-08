@@ -117,8 +117,14 @@
                 <a href="endpoint.html" class="view-link">Endpoint View</a>
                 <a href="opportunities.html" class="view-link">Opportunities</a>
                 <a href="app-ads-compliance.html" class="view-link active">App-Ads Compliance</a>
+                <div class="dropdown">
+                    <a href="#" class="view-link">Mike's Tools</a>
+                    <div class="dropdown-content">
+                        <a href="json-format.html">JSON Format</a>
+                        <a href="app-ads-compliance.html">App-Ads Compliance</a>
+                    </div>
+                </div>
             </div>
-            <div class="last-updated" id="lastUpdated"></div>
         </div>
 
         <div class="file-inputs">
@@ -198,167 +204,137 @@
         let filteredData = [];
         let lastUpdateDate = '';
         const PAGE_SIZE = 1000; // Number of rows to render at once
-        let currentPage = 0;
         
-        // File input handler with streaming parser for large files
+        // File input handler for compliance data
         document.getElementById('complianceFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
             
-            // Reset data
-            complianceData = [];
-            filteredData = [];
-            currentPage = 0;
-            
             // Show loading indicator
             const loadingIndicator = document.getElementById('loadingIndicator');
+            loadingIndicator.style.display = 'block';
+            
+            // Initialize progress bar
             const progressBar = document.getElementById('progressBar');
             const progressText = document.getElementById('progressText');
-            loadingIndicator.style.display = 'block';
-            document.getElementById('dataControls').style.display = 'none';
-            document.getElementById('tableContainer').style.display = 'none';
-            document.getElementById('statsContainer').style.display = 'none';
             
-            // Use smaller chunks for better memory management
-            const chunkSize = 2 * 1024 * 1024; // 2MB chunks for better memory usage
-            let offset = 0;
-            let lineBuffer = '';
+            processComplianceFile(file, function(data) {
+                complianceData = data;
+                
+                // Hide loading indicator
+                loadingIndicator.style.display = 'none';
+                
+                // Show data controls and table
+                document.getElementById('dataControls').style.display = 'block';
+                document.getElementById('tableContainer').style.display = 'block';
+                document.getElementById('statsContainer').style.display = 'flex';
+                
+                // Update last updated date
+                lastUpdateDate = new Date().toISOString();
+                
+                // Populate bidder dropdown
+                populateBidderDropdown();
+                
+                // Filter and display data
+                filterData();
+                
+                // Update stats
+                updateStats();
+            }, function(progress) {
+                // Update progress bar
+                progressBar.style.width = `${progress}%`;
+                progressText.textContent = `${Math.round(progress)}%`;
+            });
+        });
+        
+        // Process the CSV file with a streaming approach to handle large files
+        function processComplianceFile(file, onComplete, onProgress) {
+            const data = [];
             let headers = [];
             let firstChunk = true;
-            let totalSize = file.size;
+            let lineBuffer = '';
+            let offset = 0;
+            const chunkSize = 2 * 1024 * 1024; // 2MB chunks
+            const totalSize = file.size;
             let processedRows = 0;
-            
-            // Process in batches to avoid memory issues
-            const BATCH_SIZE = 10000; // Process 10,000 rows at a time
-            let currentBatch = [];
             
             function readNextChunk() {
                 const reader = new FileReader();
                 
                 reader.onload = function(e) {
-                    try {
-                        const chunk = e.target.result;
-                        processChunk(chunk);
-                        
-                        // Update progress
-                        offset += chunk.length;
-                        const progress = Math.min(100, Math.round((offset / totalSize) * 100));
-                        progressBar.style.width = progress + '%';
-                        progressText.textContent = `${progress}% (${processedRows.toLocaleString()} rows)`;
-                        
-                        // Continue reading if there's more data
-                        if (offset < file.size) {
-                            // Use setTimeout to prevent UI freezing
-                            setTimeout(readNextChunk, 0);
-                        } else {
-                            // Finished reading file
-                            if (lineBuffer.trim()) {
-                                processLine(lineBuffer);
+                    const chunk = e.target.result;
+                    const lines = (lineBuffer + chunk).split('\n');
+                    lineBuffer = lines.pop() || '';
+                    
+                    for (let i = 0; i < lines.length; i++) {
+                        if (firstChunk && i === 0) {
+                            // This is the header line
+                            headers = parseCSVLine(lines[i]);
+                            firstChunk = false;
+                        } else if (lines[i].trim()) {
+                            // Process data line
+                            const values = parseCSVLine(lines[i]);
+                            if (values.length === headers.length) {
+                                const entry = {};
+                                headers.forEach((header, idx) => {
+                                    entry[header] = values[idx] || '';
+                                });
+                                data.push(entry);
                             }
-                            
-                            // Process any remaining batch
-                            if (currentBatch.length > 0) {
-                                complianceData = complianceData.concat(currentBatch);
-                                currentBatch = [];
-                            }
-                            
-                            finishProcessing();
+                            processedRows++;
                         }
-                    } catch (error) {
-                        console.error('Error processing chunk:', error);
-                        alert('Error processing file: ' + error.message);
-                        loadingIndicator.style.display = 'none';
+                    }
+                    
+                    // Update progress
+                    offset += chunk.length;
+                    const progress = Math.min(100, Math.round((offset / totalSize) * 100));
+                    if (onProgress) onProgress(progress);
+                    
+                    // Continue reading or finish
+                    if (offset < totalSize) {
+                        setTimeout(readNextChunk, 0);
+                    } else {
+                        // Process any remaining line in buffer
+                        if (lineBuffer.trim()) {
+                            const values = parseCSVLine(lineBuffer);
+                            if (values.length === headers.length) {
+                                const entry = {};
+                                headers.forEach((header, idx) => {
+                                    entry[header] = values[idx] || '';
+                                });
+                                data.push(entry);
+                            }
+                        }
+                        if (onComplete) onComplete(data);
                     }
                 };
                 
                 reader.onerror = function() {
-                    console.error('FileReader error');
-                    alert('Error reading file. The file might be too large for the browser to handle.');
-                    loadingIndicator.style.display = 'none';
+                    console.error('Error reading file');
+                    alert('Error reading file. The file might be too large.');
+                    if (onComplete) onComplete(data);
                 };
                 
                 const slice = file.slice(offset, offset + chunkSize);
                 reader.readAsText(slice);
             }
             
-            function processChunk(chunk) {
-                // Combine with leftover from previous chunk
-                const text = lineBuffer + chunk;
-                const lines = text.split('\n');
-                
-                // Save the last partial line for the next chunk
-                lineBuffer = lines.pop() || '';
-                
-                // Process each complete line
-                for (let i = 0; i < lines.length; i++) {
-                    if (firstChunk && i === 0) {
-                        // This is the header row
-                        headers = parseCSVLine(lines[i]);
-                        firstChunk = false;
-                    } else {
-                        processLine(lines[i]);
-                        processedRows++;
-                        
-                        // Update progress more frequently for better feedback
-                        if (processedRows % 5000 === 0) {
-                            progressText.textContent = `${Math.min(100, Math.round((offset / totalSize) * 100))}% (${processedRows.toLocaleString()} rows)`;
-                        }
-                    }
-                }
-            }
-            
-            function processLine(line) {
-                if (!line.trim()) return;
-                
-                try {
-                    const values = parseCSVLine(line);
-                    
-                    // Skip lines with incorrect field count
-                    if (values.length !== headers.length) {
-                        console.warn('Line has incorrect number of fields:', line);
-                        return;
-                    }
-                    
-                    const entry = {};
-                    headers.forEach((header, index) => {
-                        entry[header] = values[index] || '';
-                    });
-                    
-                    // Add to current batch
-                    currentBatch.push(entry);
-                    
-                    // If batch is full, add to main data and clear batch
-                    if (currentBatch.length >= BATCH_SIZE) {
-                        complianceData = complianceData.concat(currentBatch);
-                        currentBatch = [];
-                        
-                        // Force garbage collection in some browsers
-                        if (window.gc) window.gc();
-                    }
-                } catch (error) {
-                    console.warn('Error parsing line:', error, line);
-                }
-            }
-            
             function parseCSVLine(line) {
                 const values = [];
-                let insideQuotes = false;
                 let currentValue = '';
+                let insideQuotes = false;
                 
                 for (let i = 0; i < line.length; i++) {
                     const char = line[i];
                     
                     if (char === '"') {
-                        if (insideQuotes && line[i + 1] === '"') {
-                            // Escaped quote
+                        if (insideQuotes && line[i+1] === '"') {
                             currentValue += '"';
                             i++;
                         } else {
-                            // Toggle quote state
                             insideQuotes = !insideQuotes;
                         }
                     } else if (char === ',' && !insideQuotes) {
-                        // End of field
                         values.push(currentValue);
                         currentValue = '';
                     } else {
@@ -366,40 +342,15 @@
                     }
                 }
                 
-                // Add the last field
                 values.push(currentValue);
                 return values;
             }
             
-            function finishProcessing() {
-                // Hide loading indicator
-                loadingIndicator.style.display = 'none';
-                
-                // Update last updated date
-                lastUpdateDate = new Date().toISOString();
-                document.getElementById('lastUpdated').textContent = 
-                    `Last Updated: ${formatDate(lastUpdateDate)}`;
-                
-                // Populate bidder dropdown
-                updateBidderDropdown();
-                
-                // Show controls and table
-                document.getElementById('dataControls').style.display = 'block';
-                document.getElementById('tableContainer').style.display = 'block';
-                document.getElementById('statsContainer').style.display = 'flex';
-                
-                // Initial filtering and display
-                filterData();
-                
-                // Show success message
-                alert(`Successfully processed ${complianceData.length.toLocaleString()} records.`);
-            }
-            
-            // Start reading the file
+            // Start reading
             readNextChunk();
-        });
+        }
         
-        function updateBidderDropdown() {
+        function populateBidderDropdown() {
             const bidders = [...new Set(complianceData
                 .filter(entry => entry.Bidder_Name)
                 .map(entry => entry.Bidder_Name))];
@@ -407,9 +358,7 @@
             const bidderSelect = document.getElementById('bidderSelect');
             bidderSelect.innerHTML = '<option value="">All Bidders</option>';
             bidders.sort().forEach(bidder => {
-                if (bidder) {
-                    bidderSelect.innerHTML += `<option value="${bidder}">${bidder}</option>`;
-                }
+                bidderSelect.innerHTML += `<option value="${bidder}">${bidder}</option>`;
             });
         }
         
@@ -471,15 +420,13 @@
         }
         
         function updateStats() {
-            document.getElementById('totalRecords').textContent = complianceData.length.toLocaleString();
+            const totalRecords = complianceData.length;
+            const errorRecords = complianceData.filter(entry => entry.Error_Message).length;
+            const alignedRecords = complianceData.filter(entry => entry.Aligned === 'true').length;
             
-            const errorCount = complianceData.filter(entry => entry.ErrorCode).length;
-            document.getElementById('errorRecords').textContent = errorCount.toLocaleString();
-            
-            const alignedCount = complianceData.filter(entry => 
-                entry.Aligned === "1" || entry.Aligned === "true" || entry.Aligned === "yes"
-            ).length;
-            document.getElementById('alignedRecords').textContent = alignedCount.toLocaleString();
+            document.getElementById('totalRecords').textContent = totalRecords.toLocaleString();
+            document.getElementById('errorRecords').textContent = errorRecords.toLocaleString();
+            document.getElementById('alignedRecords').textContent = alignedRecords.toLocaleString();
         }
         
         function renderTable() {

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XSP Alignment Helper - JSON Format</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header-section">
+            <h1><a href="index.html" style="text-decoration: none; color: inherit;">XSP Alignment Helper</a></h1>
+            <div class="view-switcher">
+                <a href="index.html" class="view-link">Bidder View</a>
+                <a href="publisher.html" class="view-link">Publisher View</a>
+                <a href="endpoint.html" class="view-link">Endpoint View</a>
+                <a href="opportunities.html" class="view-link">Opportunities</a>
+                <div class="dropdown">
+                    <a href="#" class="view-link">Mike's Tools</a>
+                    <div class="dropdown-content">
+                        <a href="json-format.html">JSON Format</a>
+                        <a href="app-ads-compliance.html">App-Ads Compliance</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2>OpenRTB JSON Formatter and Parameter Analyzer</h2>
+        
+        <div class="json-tools">
+            <div class="input-area">
+                <label for="jsonInput">Input JSON (paste OpenRTB bid request):</label>
+                <textarea id="jsonInput" rows="15" placeholder="Paste your JSON here..."></textarea>
+            </div>
+            
+            <div class="button-group">
+                <button id="clearBtn" class="button">Clear</button>
+            </div>
+            
+            <div class="output-area">
+                <label for="jsonOutput">Formatted JSON:</label>
+                <textarea id="jsonOutput" rows="15" readonly></textarea>
+                <div id="validationResult"></div>
+            </div>
+            
+            <div class="params-area">
+                <div class="params-header">
+                    <label for="paramsOutput">Parameters List:</label>
+                    <div class="specs-link">
+                        <a href="https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md" target="_blank">
+                            OpenRTB Spec Reference
+                        </a>
+                    </div>
+                </div>
+                <div id="paramsOutput" class="params-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <a href="#" class="scroll-top" id="scrollTop">↑</a>
+
+    <script>
+        // Auto-format JSON when text is entered/pasted
+        document.getElementById('jsonInput').addEventListener('input', formatJSON);
+        document.getElementById('jsonInput').addEventListener('paste', function() {
+            // Using setTimeout to get the pasted content after the paste event
+            setTimeout(formatJSON, 10);
+        });
+        
+        function formatJSON() {
+            const input = document.getElementById('jsonInput').value;
+            const output = document.getElementById('jsonOutput');
+            const validationResult = document.getElementById('validationResult');
+            const paramsOutput = document.getElementById('paramsOutput');
+            
+            if (!input.trim()) {
+                output.value = '';
+                validationResult.textContent = '';
+                validationResult.className = '';
+                paramsOutput.innerHTML = '';
+                return;
+            }
+            
+            try {
+                // Parse and then stringify with indentation
+                const parsed = JSON.parse(input);
+                output.value = JSON.stringify(parsed, null, 2);
+                validationResult.textContent = 'JSON is valid';
+                validationResult.className = 'valid';
+                
+                // Automatically extract parameters
+                const structuredParams = extractStructuredParams(parsed);
+                displayStructuredParams(structuredParams, paramsOutput);
+            } catch (error) {
+                output.value = '';
+                validationResult.textContent = `Invalid JSON: ${error.message}`;
+                validationResult.className = 'invalid';
+                paramsOutput.innerHTML = '';
+            }
+        }
+        
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            document.getElementById('jsonInput').value = '';
+            document.getElementById('jsonOutput').value = '';
+            document.getElementById('validationResult').textContent = '';
+            document.getElementById('paramsOutput').innerHTML = '';
+        });
+        
+        // RTB parameter descriptions
+        const rtbDescriptions = {
+            // Top level
+            "id": "Unique ID of the bid request",
+            "imp": "Array of Impression objects representing the impressions offered",
+            "site": "Details about the publisher's website",
+            "app": "Details about the publisher's app",
+            "device": "Details about the user's device",
+            "user": "Details about the user",
+            "test": "Flag to indicate if bid request is a test",
+            "at": "Auction type (1=first price, 2=second price)",
+            "tmax": "Maximum time in milliseconds for bids to be received",
+            "wseat": "Array of buyer seats allowed to bid",
+            "bseat": "Array of buyer seats blocked from bidding",
+            "allimps": "Flag to indicate if all impressions are being offered",
+            "cur": "Array of allowed currencies",
+            "wlang": "Array of allowed languages",
+            "bcat": "Array of blocked advertiser categories",
+            "badv": "Array of blocked advertiser domains",
+            "bapp": "Array of blocked applications",
+            "source": "Source of the impression opportunity",
+            "regs": "Regulatory restrictions",
+            
+            // Imp object
+            "secure": "Flag to indicate if impression requires HTTPS",
+            "bidfloor": "Minimum bid for this impression in CPM",
+            "bidfloorcur": "Currency of the bidfloor",
+            "pmp": "Private marketplace object containing deals",
+            "displaymanager": "Name of ad mediation partner, SDK, or player",
+            "displaymanagerver": "Version of ad mediation partner, SDK, or player",
+            "instl": "Flag to indicate if impression is interstitial",
+            "tagid": "Identifier for specific ad placement or ad tag",
+            "clickbrowser": "Flag to indicate if click will launch browser",
+            "exp": "Advisory duration of the impression availability in seconds",
+            "metric": "Array of metric objects for this impression",
+            
+            // Banner object
+            "w": "Width of the creative in pixels",
+            "h": "Height of the creative in pixels",
+            "format": "Array of banner format objects",
+            "pos": "Ad position (0=unknown, 1=above fold, 3=below fold)",
+            "api": "List of supported API frameworks",
+            "id": "Unique identifier for this banner object",
+            
+            // Video object
+            "mimes": "Array of supported MIME types",
+            "minduration": "Minimum video ad duration in seconds",
+            "maxduration": "Maximum video ad duration in seconds",
+            "protocols": "Array of supported video protocols",
+            "startdelay": "Start delay in seconds for pre/mid/post-roll ads",
+            "placement": "Video placement type",
+            "linearity": "Indicates if the ad must be linear, nonlinear, etc",
+            
+            // Audio object
+            "sequence": "If multiple ads, the sequence number",
+            "battr": "Blocked creative attributes",
+            "maxextended": "Maximum extended ad duration",
+            "minbitrate": "Minimum bit rate in Kbps",
+            "maxbitrate": "Maximum bit rate in Kbps",
+            
+            // Native object
+            "request": "Native request object or string",
+            "ver": "Native specification version",
+            "api": "List of supported API frameworks",
+            "battr": "Blocked creative attributes",
+            
+            // App object
+            "name": "App name",
+            "bundle": "App bundle or package name",
+            "domain": "Domain of the app",
+            "storeurl": "App store URL",
+            "cat": "Array of IAB content categories",
+            "sectioncat": "Array of IAB content categories for this section",
+            "pagecat": "Array of IAB content categories for this page",
+            "ver": "App version",
+            "privacypolicy": "Flag to indicate if app has a privacy policy",
+            "paid": "Flag to indicate if this is a paid app",
+            "publisher": "Publisher object",
+            "content": "Content object",
+            "keywords": "Comma separated list of keywords",
+            
+            // Device object
+            "ua": "User agent",
+            "geo": "Geo object",
+            "dnt": "Do Not Track flag",
+            "lmt": "Limit Ad Tracking flag",
+            "ip": "IP address",
+            "ipv6": "IPv6 address",
+            "devicetype": "Device type",
+            "make": "Device make",
+            "model": "Device model",
+            "os": "Operating system",
+            "osv": "Operating system version",
+            "hwv": "Hardware version",
+            "h": "Physical height of the screen in pixels",
+            "w": "Physical width of the screen in pixels",
+            "ppi": "Screen size as pixels per linear inch",
+            "pxratio": "Ratio of physical pixels to device independent pixels",
+            "js": "Support for JavaScript",
+            "language": "Browser language",
+            "carrier": "Carrier or ISP",
+            "connectiontype": "Network connection type",
+            "ifa": "ID sanctioned for advertiser use",
+            
+            // User object
+            "buyeruid": "Buyer-specific ID for the user",
+            "yob": "Year of birth as a 4-digit integer",
+            "gender": "Gender (M=male, F=female, O=other)",
+            "keywords": "Comma separated list of keywords, interests, or intent",
+            "customdata": "Optional feature to pass bidder data",
+            "geo": "Location of the user's home base",
+            "data": "Additional user targeting data",
+            "eids": "Extended identifiers array",
+            
+            // Source object
+            "fd": "Buyer-specific fee that should be disclosed to the user",
+            "tid": "Transaction ID",
+            "pchain": "Payment ID chain string",
+            "schain": "Supply chain object"
+        };
+        
+        // Function to extract parameters organized by their parent objects
+        function extractStructuredParams(obj) {
+            const rootParams = [];
+            const structures = {};
+            
+            function traverse(obj, path = '') {
+                if (obj === null || obj === undefined) return;
+                
+                if (Array.isArray(obj)) {
+                    // For arrays, process the first element as representative
+                    if (obj.length > 0 && typeof obj[0] === 'object' && obj[0] !== null) {
+                        // Get the parent structure name from the path
+                        const parentKey = path.split('.').pop();
+                        // Create a structure entry for this array
+                        if (parentKey && !structures[parentKey]) {
+                            structures[parentKey] = new Set();
+                        }
+                        
+                        traverse(obj[0], path ? `${path}[0]` : '[0]');
+                    }
+                } else if (typeof obj === 'object') {
+                    // For objects
+                    for (const key in obj) {
+                        if (obj.hasOwnProperty(key)) {
+                            const newPath = path ? `${path}.${key}` : key;
+                            const value = obj[key];
+                            
+                            if (path === '') {
+                                // Root level parameter
+                                rootParams.push(key);
+                            } else {
+                                // Get the structure this parameter belongs to
+                                const structureName = path.split('.')[0];
+                                if (!structures[structureName]) {
+                                    structures[structureName] = new Set();
+                                }
+                                structures[structureName].add(key);
+                            }
+                            
+                            // Recurse into object/array values
+                            if (typeof value === 'object' && value !== null) {
+                                traverse(value, newPath);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            traverse(obj);
+            
+            return {
+                root: rootParams,
+                structures: Object.fromEntries(
+                    Object.entries(structures).map(([key, set]) => [key, [...set].sort()])
+                )
+            };
+        }
+        
+        // Function to display parameters organized in columns by structure
+        function displayStructuredParams(structuredParams, container) {
+            container.innerHTML = '';
+            
+            if (!structuredParams.root.length && Object.keys(structuredParams.structures).length === 0) {
+                container.innerHTML = '<div class="no-params">No parameters found</div>';
+                return;
+            }
+            
+            // Create columns container
+            const columnsContainer = document.createElement('div');
+            columnsContainer.className = 'params-columns';
+            
+            // Add root parameters first
+            if (structuredParams.root.length > 0) {
+                const rootColumn = document.createElement('div');
+                rootColumn.className = 'param-column';
+                
+                const rootHeader = document.createElement('h3');
+                rootHeader.className = 'param-structure-header';
+                rootHeader.textContent = 'Top Level';
+                rootColumn.appendChild(rootHeader);
+                
+                const rootList = document.createElement('ul');
+                rootList.className = 'param-list';
+                
+                structuredParams.root.forEach(param => {
+                    const item = document.createElement('li');
+                    item.className = 'param-item';
+                    item.textContent = param;
+                    
+                    // Add tooltip if description exists
+                    if (rtbDescriptions[param]) {
+                        item.title = rtbDescriptions[param];
+                        item.classList.add('has-tooltip');
+                    }
+                    
+                    rootList.appendChild(item);
+                });
+                
+                rootColumn.appendChild(rootList);
+                columnsContainer.appendChild(rootColumn);
+            }
+            
+            // Add each structure as a column
+            for (const [structure, params] of Object.entries(structuredParams.structures)) {
+                if (params.length === 0) continue;
+                
+                const column = document.createElement('div');
+                column.className = 'param-column';
+                
+                const header = document.createElement('h3');
+                header.className = 'param-structure-header';
+                header.textContent = structure;
+                column.appendChild(header);
+                
+                const list = document.createElement('ul');
+                list.className = 'param-list';
+                
+                params.forEach(param => {
+                    const item = document.createElement('li');
+                    item.className = 'param-item';
+                    item.textContent = param;
+                    
+                    // Add tooltip if description exists
+                    if (rtbDescriptions[param]) {
+                        item.title = rtbDescriptions[param];
+                        item.classList.add('has-tooltip');
+                    }
+                    
+                    list.appendChild(item);
+                });
+                
+                column.appendChild(list);
+                columnsContainer.appendChild(column);
+            }
+            
+            container.appendChild(columnsContainer);
+        }
+        
+        // Scroll-to-top functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const scrollButton = document.getElementById('scrollTop');
+            
+            window.addEventListener('scroll', function() {
+                if (window.pageYOffset > 300) {
+                    scrollButton.classList.add('visible');
+                } else {
+                    scrollButton.classList.remove('visible');
+                }
+            });
+
+            scrollButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html>

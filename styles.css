@@ -39,6 +39,7 @@
     display: flex;
     gap: 10px;
     margin: 15px 0;
+    align-items: center;
 }
 
 .view-link {
@@ -49,6 +50,9 @@
     color: #333;
     font-size: 14px;
     transition: background-color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
 }
 
 .view-link:hover {
@@ -58,6 +62,55 @@
 .view-link.active {
     background-color: #007bff;
     color: white;
+}
+
+/* Dropdown menu styles */
+.dropdown {
+    position: relative;
+    display: inline-block;
+    height: 100%;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+    border-radius: 4px;
+    top: 100%;
+    left: 0;
+    margin-top: 2px;
+}
+
+.dropdown-content a {
+    padding: 10px 15px;
+    text-decoration: none;
+    display: block;
+    color: #333;
+    font-size: 14px;
+}
+
+.dropdown-content a:hover {
+    background-color: #e0e0e0;
+}
+
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+.dropdown .view-link {
+    display: inline-flex;
+    align-items: center;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.dropdown .view-link::after {
+    content: " ▼";
+    font-size: 10px;
+    margin-left: 5px;
 }
 
 /* ==========================================================================
@@ -517,4 +570,171 @@
     background-color: #fff;
     border-radius: 4px;
     border: 1px solid #e0e0e0;
+}
+
+/* ==========================================================================
+   JSON Format Page
+   ========================================================================== */
+.json-tools {
+    margin: 20px 0;
+}
+
+.input-area, .output-area, .params-area {
+    margin-bottom: 20px;
+}
+
+.input-area label, .output-area label, .params-area label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #555;
+}
+
+.json-tools textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 14px;
+    line-height: 1.4;
+    resize: vertical;
+}
+
+.button-group {
+    margin: 15px 0;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.button {
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.button:hover {
+    background-color: #0056b3;
+}
+
+#validationResult {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+#validationResult.valid {
+    background-color: #dff0d8;
+    color: #3c763d;
+}
+
+#validationResult.invalid {
+    background-color: #f2dede;
+    color: #a94442;
+}
+
+/* Parameter List Styles */
+.params-list {
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    max-height: 600px;
+    overflow-y: auto;
+    font-family: monospace;
+}
+
+.params-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.specs-link {
+    font-size: 14px;
+}
+
+.specs-link a {
+    color: #007bff;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+}
+
+.specs-link a:hover {
+    text-decoration: underline;
+}
+
+.specs-link a::before {
+    content: "📄";
+    margin-right: 5px;
+}
+
+.params-columns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.param-column {
+    flex: 0 0 200px;
+    min-width: 200px;
+    margin-bottom: 15px;
+}
+
+.param-structure-header {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin: 0 0 10px 0;
+    padding-bottom: 5px;
+    border-bottom: 2px solid #007bff;
+}
+
+.param-list {
+    list-style-type: none;
+    padding-left: 0;
+    margin: 5px 0;
+}
+
+.param-item {
+    margin: 5px 0;
+    padding: 4px 0;
+    font-size: 14px;
+    border-bottom: 1px solid #eee;
+}
+
+.param-item:last-child {
+    border-bottom: none;
+}
+
+.param-item.has-tooltip {
+    cursor: help;
+    position: relative;
+    border-bottom: 1px dotted #666;
+}
+
+.param-item.has-tooltip:hover {
+    background-color: #f0f0f0;
+}
+
+.param-error {
+    color: #a94442;
+    padding: 10px;
+    background-color: #f2dede;
+    border-radius: 4px;
+}
+
+.no-params {
+    color: #666;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
 }
