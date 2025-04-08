@@ -23,16 +23,23 @@
    ========================================================================== */
 .header-section {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
     padding-bottom: 20px;
     border-bottom: 1px solid #eee;
+    text-align: center;
+}
+
+.header-section h1 {
+    margin-bottom: 15px;
+    margin-top: 0;
 }
 
 .last-updated {
     color: #666;
     font-size: 14px;
+    margin-top: 10px;
 }
 
 .view-switcher {
@@ -40,6 +47,8 @@
     gap: 10px;
     margin: 15px 0;
     align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
 }
 
 .view-link {
@@ -126,10 +135,16 @@
     border-radius: 4px;
     font-size: 16px;
     background-color: white;
+    display: block;
+    margin-left: 0;
+    margin-right: auto;
 }
 
 .file-inputs {
     margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
 }
 
 .file-inputs label {
@@ -150,11 +165,31 @@
 
 .search-box {
     width: 100%;
-    padding: 8px;
-    margin: 10px 0;
+    max-width: 600px;
+    padding: 10px;
+    margin: 10px 0 20px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 14px;
+    display: block;
+}
+
+/* ==========================================================================
+   Content Centering
+   ========================================================================== */
+#publisherList, 
+#bidderList, 
+#endpointList, 
+#opportunitiesList {
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+h2 {
+    text-align: center;
+    margin-top: 30px;
+    margin-bottom: 20px;
 }
 
 /* ==========================================================================
@@ -576,29 +611,35 @@
    JSON Format Page
    ========================================================================== */
 .json-tools {
-    margin: 20px 0;
+    margin: 20px auto;
+    max-width: 1000px;
 }
 
 .input-area, .output-area, .params-area {
-    margin-bottom: 20px;
+    margin-bottom: 30px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .input-area label, .output-area label, .params-area label {
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     font-weight: bold;
     color: #555;
 }
 
 .json-tools textarea {
     width: 100%;
-    padding: 10px;
+    padding: 12px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-family: monospace;
     font-size: 14px;
     line-height: 1.4;
     resize: vertical;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .button-group {
@@ -606,10 +647,11 @@
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+    justify-content: center;
 }
 
 .button {
-    padding: 10px 15px;
+    padding: 10px 20px;
     background-color: #007bff;
     color: white;
     border: none;
@@ -627,6 +669,7 @@
     margin-top: 10px;
     padding: 10px;
     border-radius: 4px;
+    text-align: center;
 }
 
 #validationResult.valid {
