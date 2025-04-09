@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XSP Alignment Helper - JSON to CSV Converter</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .converter-container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .conversion-options {
+            margin: 15px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #eee;
+        }
+
+        .option-group {
+            margin-bottom: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .option-group label {
+            font-weight: 500;
+            margin-right: 10px;
+        }
+
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.85em;
+            overflow-x: auto;
+            display: block;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .preview-table th, .preview-table td {
+            border: 1px solid #ddd;
+            padding: 6px 8px;
+            text-align: left;
+        }
+
+        .preview-table th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .preview-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .preview-container {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .action-buttons {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .button {
+            padding: 8px 15px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .convert-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .download-btn {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .clear-btn {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .preview-btn {
+            background-color: #FF9800;
+            color: white;
+        }
+
+        .json-input {
+            width: 100%;
+            min-height: 200px;
+            font-family: monospace;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .status-message {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        .sample-json {
+            font-size: 0.85em;
+            color: #666;
+            cursor: pointer;
+            text-decoration: underline;
+            margin-right: 10px;
+        }
+
+        .input-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .input-examples {
+            font-size: 0.85em;
+        }
+
+        .file-upload-container {
+            margin-bottom: 10px;
+        }
+        
+        .file-upload-button {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .file-upload-button .button {
+            margin-right: 10px;
+            padding: 8px 15px;
+            border-radius: 4px;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .file-upload-button .button:hover {
+            background-color: #e9e9e9;
+        }
+        
+        #fileNameDisplay {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .stats-panel {
+            background-color: #f8f9fa;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .stat-item {
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 16px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-section">
+            <h1><a href="index.html" style="text-decoration: none; color: inherit;">XSP Alignment Helper</a></h1>
+            <div class="view-switcher">
+                <a href="index.html" class="view-link">Bidder View</a>
+                <a href="publisher.html" class="view-link">Publisher View</a>
+                <a href="endpoint.html" class="view-link">Endpoint View</a>
+                <a href="opportunities.html" class="view-link">Opportunities</a>
+                <div class="dropdown">
+                    <a href="#" class="view-link active">Mike's Tools</a>
+                    <div class="dropdown-content">
+                        <a href="json-format.html">Bid Request Formatter</a>
+                        <a href="app-ads-compliance.html">App-Ads Compliance</a>
+                        <a href="md5-converter.html">MD5 Converter</a>
+                        <a href="utc-converter.html">UTC Converter</a>
+                        <a href="json-to-csv.html">JSON to CSV</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="converter-container">
+            <h2>JSON to CSV Converter</h2>
+            <p>Convert JSON data to CSV format. Handles nested objects, arrays, and various JSON structures.</p>
+
+            <div class="input-header">
+                <label for="jsonInput">Input JSON:</label>
+                <div class="input-examples">
+                    <span class="sample-json" data-type="simple">Try Simple Example</span>
+                    <span class="sample-json" data-type="nested">Try Nested Example</span>
+                    <span class="sample-json" data-type="array">Try Array of Objects</span>
+                </div>
+            </div>
+            <div class="file-upload-container">
+                <label for="jsonFile" class="file-upload-label">
+                    <div class="file-upload-button">
+                        <span class="button">Choose JSON File</span>
+                        <span id="fileNameDisplay">No file chosen</span>
+                    </div>
+                </label>
+                <input type="file" id="jsonFile" accept=".json,application/json" style="display: none;">
+            </div>
+            <textarea id="jsonInput" class="json-input" placeholder="Paste your JSON here..."></textarea>
+
+            <div class="conversion-options">
+                <h3>Conversion Options</h3>
+                <div class="option-group">
+                    <div>
+                        <label for="flattenNestedObjects">Flatten nested objects:</label>
+                        <input type="checkbox" id="flattenNestedObjects" checked>
+                    </div>
+                    <div>
+                        <label for="includeNestedArrays">Process nested arrays:</label>
+                        <input type="checkbox" id="includeNestedArrays" checked>
+                    </div>
+                </div>
+                <div class="option-group">
+                    <div>
+                        <label for="delimiter">Delimiter:</label>
+                        <select id="delimiter">
+                            <option value="comma" selected>Comma (,)</option>
+                            <option value="tab">Tab</option>
+                            <option value="semicolon">Semicolon (;)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="quoteStrings">Quote strings:</label>
+                        <input type="checkbox" id="quoteStrings" checked>
+                    </div>
+                </div>
+                <div class="option-group">
+                    <div>
+                        <label for="extractPath">Extract specific path (optional):</label>
+                        <input type="text" id="extractPath" placeholder="e.g., data.items or stats.233291">
+                    </div>
+                </div>
+                <div class="option-group">
+                    <div>
+                        <label for="timestampFormat">Convert timestamp fields:</label>
+                        <select id="timestampFormat">
+                            <option value="none" selected>No conversion</option>
+                            <option value="ms">Milliseconds to date/time</option>
+                            <option value="s">Seconds to date/time</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="timestampFields">Timestamp field names (comma separated):</label>
+                        <input type="text" id="timestampFields" placeholder="e.g., timestamp,date,created_at">
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button id="previewBtn" class="button preview-btn">Preview</button>
+                <button id="convertBtn" class="button convert-btn">Convert to CSV</button>
+                <button id="downloadBtn" class="button download-btn" disabled>Download CSV</button>
+                <button id="clearBtn" class="button clear-btn">Clear</button>
+            </div>
+
+            <div id="statusMessage" class="status-message"></div>
+
+            <div id="previewContainer" class="preview-container">
+                <h3>Preview (first 10 rows)</h3>
+                <div id="tablePreview"></div>
+            </div>
+        </div>
+    </div>
+
+    <a href="#" class="scroll-top" id="scrollTop">↑</a>
+
+    <script>
+        // Global variables to store conversion results
+        let csvContent = '';
+        let headers = [];
+        let rows = [];
+
+        // Sample JSON examples
+        const jsonExamples = {
+            simple: {
+                name: "John Doe",
+                age: 30,
+                email: "john@example.com",
+                active: true,
+                created: 1617283200000
+            },
+            nested: {
+                user: {
+                    id: 123,
+                    name: "Jane Smith",
+                    contact: {
+                        email: "jane@example.com",
+                        phone: "555-1234"
+                    }
+                },
+                subscriptions: ["premium", "newsletter"],
+                stats: {
+                    visits: 45,
+                    purchases: 2
+                },
+                lastLogin: 1649819200000
+            },
+            array: [
+                {
+                    id: 1,
+                    product: "Laptop",
+                    price: 999.99,
+                    inStock: true,
+                    specs: {
+                        cpu: "i7",
+                        ram: "16GB"
+                    }
+                },
+                {
+                    id: 2,
+                    product: "Phone",
+                    price: 699.99,
+                    inStock: false,
+                    specs: {
+                        cpu: "A15",
+                        ram: "8GB"
+                    }
+                },
+                {
+                    id: 3,
+                    product: "Tablet",
+                    price: 349.99,
+                    inStock: true,
+                    specs: {
+                        cpu: "A14",
+                        ram: "4GB"
+                    }
+                }
+            ],
+            stats_example: {
+                "errorCode": "SUCCESS",
+                "stats": {
+                    "233291": [
+                        {
+                            "clearrate": 0.0,
+                            "requests_handled": 685,
+                            "cpm": 0.0,
+                            "requests": 748040,
+                            "timestamp": 1744084800000
+                        },
+                        {
+                            "clearrate": 0.0,
+                            "requests_handled": 956,
+                            "cpm": 0.0,
+                            "requests": 732416,
+                            "timestamp": 1744088400000
+                        }
+                    ]
+                }
+            }
+        };
+
+        // Event listeners for sample JSON examples
+        document.querySelectorAll('.sample-json').forEach(element => {
+            element.addEventListener('click', function() {
+                const type = this.getAttribute('data-type');
+                
+                // Use the existing examples for simple, nested, array
+                // And add the stats example
+                let example = jsonExamples[type];
+                if (type === 'stats' || type === 'stats_example') {
+                    example = jsonExamples.stats_example;
+                }
+                
+                document.getElementById('jsonInput').value = JSON.stringify(example, null, 2);
+                
+                // Pre-fill settings
+                if (type === 'stats' || type === 'stats_example') {
+                    document.getElementById('flattenNestedObjects').checked = true;
+                    document.getElementById('includeNestedArrays').checked = true;
+                    document.getElementById('extractPath').value = 'stats.233291';
+                    document.getElementById('timestampFields').value = 'timestamp';
+                    document.getElementById('timestampFormat').value = 'ms';
+                }
+                // Other pre-fill logic remains the same
+            });
+        });
+
+        // Add "Stats Example" in the UI
+        document.querySelector('.input-examples').insertAdjacentHTML('beforeend', 
+            '<span class="sample-json" data-type="stats">Try Stats Example</span>' +
+            '<span class="sample-json-special" data-type="real_stats">Try Real Stats</span>');
+
+        // Add event listener for the special real stats example
+        document.querySelector('.sample-json-special').addEventListener('click', function() {
+            // The example provided in the question
+            const realStatsExample = `{"errorCode":"SUCCESS","stats":{"233291":[{"clearrate":0.0,"requests_handled":685,"cpm":0.0,"request_bidrate":0.0,"cost":0.0,"rev_per_min":0.0,"requests":748040,"auction_bidrate":0.0,"request_rpm":0.0,"auction_qps":0,"request_qps":207,"auctions_throttled":747321,"request_fillrate":0.0,"clears":0,"spend":0.0,"bids":0,"auction_rpm":0.0,"auction_fillrate":0.0,"auctions":685,"timestamp":1744084800000},{"clearrate":0.0,"requests_handled":956,"cpm":0.0,"request_bidrate":0.0,"cost":0.0,"rev_per_min":0.0,"requests":732416,"auction_bidrate":0.0,"request_rpm":0.0,"auction_qps":0,"request_qps":203,"auctions_throttled":731441,"request_fillrate":0.0,"clears":0,"spend":0.0,"bids":0,"auction_rpm":0.0,"auction_fillrate":0.0,"auctions":956,"timestamp":1744088400000},{"clearrate":0.0,"requests_handled":678,"cpm":0.0,"request_bidrate":0.0,"cost":0.0,"rev_per_min":0.0,"requests":692709,"auction_bidrate":0.0,"request_rpm":0.0,"auction_qps":0,"request_qps":192,"auctions_throttled":692012,"request_fillrate":0.0,"clears":0,"spend":0.0,"bids":0,"auction_rpm":0.0,"auction_fillrate":0.0,"auctions":678,"timestamp":1744092000000}]}}`;
+            
+            document.getElementById('jsonInput').value = realStatsExample;
+            
+            // Pre-fill appropriate settings
+            document.getElementById('flattenNestedObjects').checked = true;
+            document.getElementById('includeNestedArrays').checked = true;
+            document.getElementById('extractPath').value = 'stats.233291';
+            document.getElementById('timestampFields').value = 'timestamp';
+            document.getElementById('timestampFormat').value = 'ms';
+            
+            // Auto-detect and show stats
+            try {
+                const parsed = JSON.parse(realStatsExample);
+                showStatsPanel(parsed);
+            } catch (e) {
+                console.error("Error parsing stats example:", e);
+            }
+        });
+
+        // File upload handler
+        document.getElementById('jsonFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Update file name display
+            document.getElementById('fileNameDisplay').textContent = file.name;
+            
+            // Read the file
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const jsonContent = e.target.result;
+                    
+                    // Try to parse the JSON to validate it
+                    JSON.parse(jsonContent);
+                    
+                    // If valid, set it in the textarea
+                    document.getElementById('jsonInput').value = jsonContent;
+                    
+                    // Auto-detect and set appropriate options for the file
+                    autoDetectJsonStructure(jsonContent);
+                    
+                    // Show success message
+                    showStatus('File loaded successfully', 'success');
+                } catch (error) {
+                    showStatus(`Invalid JSON file: ${error.message}`, 'error');
+                }
+            };
+            reader.onerror = function() {
+                showStatus('Error reading file', 'error');
+            };
+            reader.readAsText(file);
+        });
+
+        // Function to auto-detect JSON structure and set appropriate options
+        function autoDetectJsonStructure(jsonString) {
+            try {
+                const data = JSON.parse(jsonString);
+                
+                // Check for stats-like structure
+                if (data.stats && typeof data.stats === 'object') {
+                    // This looks like the stats example
+                    document.getElementById('flattenNestedObjects').checked = true;
+                    document.getElementById('includeNestedArrays').checked = true;
+                    
+                    // Try to find a key in stats that contains an array
+                    for (const key in data.stats) {
+                        if (Array.isArray(data.stats[key]) && data.stats[key].length > 0) {
+                            document.getElementById('extractPath').value = `stats.${key}`;
+                            break;
+                        }
+                    }
+                    
+                    // Check for timestamp fields
+                    if (data.stats && Object.keys(data.stats).length > 0) {
+                        const firstKey = Object.keys(data.stats)[0];
+                        if (Array.isArray(data.stats[firstKey]) && data.stats[firstKey].length > 0) {
+                            const firstItem = data.stats[firstKey][0];
+                            // Check if there's a timestamp field
+                            if (firstItem.timestamp && typeof firstItem.timestamp === 'number') {
+                                document.getElementById('timestampFields').value = 'timestamp';
+                                document.getElementById('timestampFormat').value = 'ms';
+                            }
+                        }
+                    }
+                    
+                    // Show stats panel with detected information
+                    showStatsPanel(data);
+                }
+                
+                // Detect if it's an array of objects
+                if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'object') {
+                    document.getElementById('flattenNestedObjects').checked = true;
+                    document.getElementById('includeNestedArrays').checked = true;
+                    document.getElementById('extractPath').value = '';
+                }
+            } catch (error) {
+                console.error('Error in auto-detection:', error);
+            }
+        }
+
+        // Function to show statistics about the loaded JSON
+        function showStatsPanel(data) {
+            // Remove any existing stats panel
+            const existingPanel = document.getElementById('statsPanel');
+            if (existingPanel) {
+                existingPanel.remove();
+            }
+            
+            // Create stats panel
+            const statsPanel = document.createElement('div');
+            statsPanel.id = 'statsPanel';
+            statsPanel.className = 'stats-panel';
+            
+            let stats = [];
+            
+            // Check for stats object
+            if (data.stats && typeof data.stats === 'object') {
+                const statsKeys = Object.keys(data.stats);
+                if (statsKeys.length > 0) {
+                    // Add publisher ID
+                    stats.push({
+                        label: 'Publisher ID',
+                        value: statsKeys[0]
+                    });
+                    
+                    // Check for arrays inside the first key
+                    const firstKey = statsKeys[0];
+                    if (Array.isArray(data.stats[firstKey])) {
+                        // Add records count
+                        stats.push({
+                            label: 'Records',
+                            value: data.stats[firstKey].length
+                        });
+                        
+                        // Add time range if timestamps are present
+                        if (data.stats[firstKey].length > 0 && 
+                            data.stats[firstKey][0].timestamp && 
+                            data.stats[firstKey][data.stats[firstKey].length - 1].timestamp) {
+                            
+                            const firstTimestamp = new Date(data.stats[firstKey][0].timestamp);
+                            const lastTimestamp = new Date(data.stats[firstKey][data.stats[firstKey].length - 1].timestamp);
+                            
+                            stats.push({
+                                label: 'Time Range',
+                                value: `${firstTimestamp.toLocaleDateString()} - ${lastTimestamp.toLocaleDateString()}`
+                            });
+                        }
+                        
+                        // Get field names from the first record
+                        if (data.stats[firstKey].length > 0) {
+                            const fieldCount = Object.keys(data.stats[firstKey][0]).length;
+                            stats.push({
+                                label: 'Fields per Record',
+                                value: fieldCount
+                            });
+                        }
+                    }
+                }
+            } else {
+                // For other types of JSON, show basic stats
+                if (Array.isArray(data)) {
+                    stats.push({
+                        label: 'Array Items',
+                        value: data.length
+                    });
+                    
+                    if (data.length > 0 && typeof data[0] === 'object') {
+                        stats.push({
+                            label: 'Fields per Item',
+                            value: Object.keys(data[0]).length
+                        });
+                    }
+                } else if (typeof data === 'object') {
+                    stats.push({
+                        label: 'Top-level Keys',
+                        value: Object.keys(data).length
+                    });
+                }
+            }
+            
+            // Add stats to panel
+            stats.forEach(stat => {
+                const statItem = document.createElement('div');
+                statItem.className = 'stat-item';
+                
+                const statLabel = document.createElement('div');
+                statLabel.className = 'stat-label';
+                statLabel.textContent = stat.label;
+                
+                const statValue = document.createElement('div');
+                statValue.className = 'stat-value';
+                statValue.textContent = stat.value;
+                
+                statItem.appendChild(statLabel);
+                statItem.appendChild(statValue);
+                statsPanel.appendChild(statItem);
+            });
+            
+            // Insert after the textarea
+            const jsonInput = document.getElementById('jsonInput');
+            jsonInput.parentNode.insertBefore(statsPanel, jsonInput.nextSibling);
+        }
+
+        // Event listeners for buttons
+        document.getElementById('previewBtn').addEventListener('click', previewConversion);
+        document.getElementById('convertBtn').addEventListener('click', convertToCSV);
+        document.getElementById('downloadBtn').addEventListener('click', downloadCSV);
+        document.getElementById('clearBtn').addEventListener('click', clearAll);
+
+        // Function to parse JSON input
+        function parseJsonInput() {
+            const jsonInput = document.getElementById('jsonInput').value.trim();
+            
+            if (!jsonInput) {
+                showStatus('Please enter JSON data', 'error');
+                return null;
+            }
+            
+            try {
+                return JSON.parse(jsonInput);
+            } catch (error) {
+                showStatus(`Invalid JSON: ${error.message}`, 'error');
+                return null;
+            }
+        }
+
+        // Function to extract data from a specific path in the JSON if specified
+        function extractFromPath(jsonData) {
+            const extractPath = document.getElementById('extractPath').value.trim();
+            
+            if (!extractPath) {
+                return jsonData;
+            }
+            
+            try {
+                const pathParts = extractPath.split('.');
+                let result = jsonData;
+                
+                for (const part of pathParts) {
+                    if (result === undefined || result === null) break;
+                    
+                    // Handle array indices in the path like path.to.array[0]
+                    if (part.includes('[') && part.includes(']')) {
+                        const match = part.match(/([^\[]+)\[(\d+)\]/);
+                        if (match) {
+                            const arrayName = match[1];
+                            const index = parseInt(match[2], 10);
+                            
+                            if (result[arrayName] && Array.isArray(result[arrayName]) && result[arrayName].length > index) {
+                                result = result[arrayName][index];
+                            } else {
+                                result = undefined;
+                                break;
+                            }
+                        } else {
+                            result = result[part];
+                        }
+                    } else {
+                        result = result[part];
+                    }
+                }
+                
+                if (result === undefined || result === null) {
+                    showStatus(`Path "${extractPath}" not found in JSON`, 'error');
+                    return null;
+                }
+                
+                return result;
+            } catch (error) {
+                showStatus(`Error extracting from path: ${error.message}`, 'error');
+                return null;
+            }
+        }
+
+        // Function to flatten nested objects
+        function flattenObject(obj, prefix = '') {
+            const flattened = {};
+            
+            for (const key in obj) {
+                if (obj.hasOwnProperty(key)) {
+                    const value = obj[key];
+                    const newKey = prefix ? `${prefix}.${key}` : key;
+                    
+                    if (value && typeof value === 'object' && !Array.isArray(value) && 
+                        document.getElementById('flattenNestedObjects').checked) {
+                        Object.assign(flattened, flattenObject(value, newKey));
+                    } else if (Array.isArray(value) && typeof value[0] === 'object' && 
+                               document.getElementById('includeNestedArrays').checked) {
+                        // For arrays of objects, we'll handle them separately
+                        flattened[newKey] = value;
+                    } else {
+                        flattened[newKey] = convertTimestampIfNeeded(key, value);
+                    }
+                }
+            }
+            
+            return flattened;
+        }
+
+        // Function to convert timestamp values if needed
+        function convertTimestampIfNeeded(key, value) {
+            const timestampFormat = document.getElementById('timestampFormat').value;
+            if (timestampFormat === 'none') return value;
+            
+            const timestampFields = document.getElementById('timestampFields').value
+                .split(',')
+                .map(field => field.trim());
+                
+            if (timestampFields.includes(key) && typeof value === 'number') {
+                try {
+                    const multiplier = timestampFormat === 'ms' ? 1 : 1000;
+                    const date = new Date(value * multiplier);
+                    return date.toISOString();
+                } catch (error) {
+                    console.warn(`Failed to convert timestamp ${key}:`, error);
+                    return value;
+                }
+            }
+            
+            return value;
+        }
+
+        // Function to convert JSON to CSV
+        function convertToCSV() {
+            const jsonData = parseJsonInput();
+            if (!jsonData) return;
+            
+            const extractedData = extractFromPath(jsonData);
+            if (!extractedData) return;
+            
+            headers = [];
+            rows = [];
+            
+            // Handle different data types
+            if (Array.isArray(extractedData)) {
+                if (extractedData.length === 0) {
+                    showStatus('Empty array, nothing to convert', 'error');
+                    return;
+                }
+                
+                if (typeof extractedData[0] === 'object' && extractedData[0] !== null) {
+                    // Array of objects - most common case
+                    processArrayOfObjects(extractedData);
+                } else {
+                    // Array of primitives
+                    headers = ['value'];
+                    extractedData.forEach(item => {
+                        rows.push([item]);
+                    });
+                }
+            } else if (typeof extractedData === 'object' && extractedData !== null) {
+                // Handle special case for objects with array values
+                const arrayKeys = Object.keys(extractedData).filter(key => 
+                    Array.isArray(extractedData[key]) && 
+                    extractedData[key].length > 0 && 
+                    typeof extractedData[key][0] === 'object');
+                
+                if (arrayKeys.length > 0) {
+                    // Process the first array found
+                    const firstArrayKey = arrayKeys[0];
+                    processNestedArrayOfObjects(firstArrayKey, extractedData[firstArrayKey]);
+                } else {
+                    // Regular object
+                    processObject(extractedData);
+                }
+            } else {
+                // Single primitive value
+                headers = ['value'];
+                rows = [[extractedData]];
+            }
+            
+            generateCSV();
+            showStatus('Conversion successful! You can now download the CSV file.', 'success');
+            document.getElementById('downloadBtn').disabled = false;
+            
+            // Show preview
+            showPreview();
+        }
+
+        // Function to process an array of objects
+        function processArrayOfObjects(data) {
+            // Get unique headers from all objects in the array
+            const allHeaders = new Set();
+            
+            // First pass: collect all possible headers
+            data.forEach(item => {
+                if (typeof item === 'object' && item !== null) {
+                    const flattened = flattenObject(item);
+                    Object.keys(flattened).forEach(key => allHeaders.add(key));
+                }
+            });
+            
+            headers = Array.from(allHeaders);
+            
+            // Second pass: create rows with all headers
+            data.forEach(item => {
+                if (typeof item === 'object' && item !== null) {
+                    const flattened = flattenObject(item);
+                    const row = headers.map(header => {
+                        return flattened[header] !== undefined ? flattened[header] : '';
+                    });
+                    rows.push(row);
+                }
+            });
+        }
+
+        // Function to process a single object
+        function processObject(data) {
+            const flattened = flattenObject(data);
+            
+            // For a single object, we'll have headers and values as columns
+            if (Object.keys(flattened).length === 0) {
+                showStatus('No data to convert', 'error');
+                return;
+            }
+            
+            headers = ['key', 'value'];
+            
+            for (const [key, value] of Object.entries(flattened)) {
+                if (Array.isArray(value) && typeof value[0] === 'object' && value[0] !== null &&
+                    document.getElementById('includeNestedArrays').checked) {
+                    // Process array of objects separately
+                    processNestedArrayOfObjects(key, value);
+                } else {
+                    rows.push([key, value]);
+                }
+            }
+        }
+
+        // Function to process nested arrays of objects
+        function processNestedArrayOfObjects(parentKey, data) {
+            // Check if data is empty
+            if (!Array.isArray(data) || data.length === 0) {
+                return;
+            }
+            
+            // Get unique headers from all objects in the array
+            const allHeaders = new Set();
+            
+            // First pass: collect all possible headers
+            data.forEach(item => {
+                if (typeof item === 'object' && item !== null) {
+                    const flattened = flattenObject(item);
+                    Object.keys(flattened).forEach(key => allHeaders.add(key));
+                }
+            });
+            
+            // Sort headers for consistent output
+            const sortedHeaders = Array.from(allHeaders).sort();
+            
+            // If we don't have any rows yet, use these as our headers
+            if (headers.length === 0) {
+                headers = sortedHeaders;
+            }
+            
+            // Second pass: create rows with all headers
+            data.forEach(item => {
+                if (typeof item === 'object' && item !== null) {
+                    const flattened = flattenObject(item);
+                    
+                    // Create a row with values for each header
+                    const row = sortedHeaders.map(header => {
+                        return flattened[header] !== undefined ? flattened[header] : '';
+                    });
+                    
+                    rows.push(row);
+                }
+            });
+        }
+
+        // Function to generate CSV content from headers and rows
+        function generateCSV() {
+            const delimiter = getDelimiter();
+            const quoteStrings = document.getElementById('quoteStrings').checked;
+            
+            // Prepare header row
+            const headerRow = headers.map(header => formatValue(header, quoteStrings)).join(delimiter);
+            
+            // Prepare data rows
+            const dataRows = rows.map(row => {
+                return row.map(value => formatValue(value, quoteStrings)).join(delimiter);
+            });
+            
+            // Combine all rows
+            csvContent = [headerRow, ...dataRows].join('\n');
+        }
+
+        // Function to format a value for CSV
+        function formatValue(value, quoteStrings) {
+            if (value === null || value === undefined) {
+                return '';
+            }
+            
+            const stringValue = String(value);
+            
+            // Handle arrays
+            if (Array.isArray(value)) {
+                return quoteStrings ? `"${JSON.stringify(value)}"` : JSON.stringify(value);
+            }
+            
+            // Handle objects
+            if (typeof value === 'object') {
+                return quoteStrings ? `"${JSON.stringify(value)}"` : JSON.stringify(value);
+            }
+            
+            // Quote strings if option is selected and the value contains delimiter or quotes
+            if (quoteStrings && typeof value === 'string') {
+                // Escape quotes by doubling them and wrap in quotes
+                return `"${stringValue.replace(/"/g, '""')}"`;
+            }
+            
+            return stringValue;
+        }
+
+        // Function to get the selected delimiter
+        function getDelimiter() {
+            const delimiterSelect = document.getElementById('delimiter').value;
+            switch (delimiterSelect) {
+                case 'tab': return '\t';
+                case 'semicolon': return ';';
+                case 'comma':
+                default: return ',';
+            }
+        }
+
+        // Function to download the CSV file
+        function downloadCSV() {
+            if (!csvContent) {
+                showStatus('No data to download. Please convert JSON first.', 'error');
+                return;
+            }
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'data_export_' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.csv');
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Function to preview the conversion
+        function previewConversion() {
+            convertToCSV();
+            showPreview();
+        }
+
+        // Function to show the table preview
+        function showPreview() {
+            if (rows.length === 0 || headers.length === 0) {
+                return;
+            }
+            
+            const previewContainer = document.getElementById('previewContainer');
+            const tablePreview = document.getElementById('tablePreview');
+            
+            // Create table for preview
+            let tableHTML = '<table class="preview-table">';
+            
+            // Add header row
+            tableHTML += '<tr>';
+            headers.forEach(header => {
+                tableHTML += `<th>${escapeHTML(header)}</th>`;
+            });
+            tableHTML += '</tr>';
+            
+            // Add data rows (limited to first 10)
+            const previewRows = rows.slice(0, 10);
+            previewRows.forEach(row => {
+                tableHTML += '<tr>';
+                row.forEach(cell => {
+                    let cellContent = cell;
+                    
+                    // Format cell content for display
+                    if (cellContent === null || cellContent === undefined) {
+                        cellContent = '';
+                    } else if (typeof cellContent === 'object') {
+                        cellContent = JSON.stringify(cellContent);
+                    }
+                    
+                    // Limit cell content length for display
+                    if (typeof cellContent === 'string' && cellContent.length > 50) {
+                        cellContent = cellContent.substring(0, 47) + '...';
+                    }
+                    
+                    tableHTML += `<td>${escapeHTML(String(cellContent))}</td>`;
+                });
+                tableHTML += '</tr>';
+            });
+            
+            tableHTML += '</table>';
+            
+            tablePreview.innerHTML = tableHTML;
+            previewContainer.style.display = 'block';
+            
+            // Show row count info
+            if (rows.length > 10) {
+                tablePreview.innerHTML += `<p><em>Showing 10 of ${rows.length} rows</em></p>`;
+            }
+        }
+
+        // Helper function to escape HTML
+        function escapeHTML(str) {
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // Function to show status messages
+        function showStatus(message, type) {
+            const statusElement = document.getElementById('statusMessage');
+            statusElement.textContent = message;
+            statusElement.className = 'status-message ' + type;
+            statusElement.style.display = 'block';
+            
+            // Hide the message after 5 seconds
+            setTimeout(() => {
+                statusElement.style.display = 'none';
+            }, 5000);
+        }
+
+        // Function to clear all inputs and results
+        function clearAll() {
+            document.getElementById('jsonInput').value = '';
+            document.getElementById('extractPath').value = '';
+            document.getElementById('timestampFields').value = '';
+            document.getElementById('statusMessage').style.display = 'none';
+            document.getElementById('previewContainer').style.display = 'none';
+            document.getElementById('downloadBtn').disabled = true;
+            csvContent = '';
+            headers = [];
+            rows = [];
+        }
+
+        // Scroll-to-top functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const scrollButton = document.getElementById('scrollTop');
+            
+            window.addEventListener('scroll', function() {
+                if (window.pageYOffset > 300) {
+                    scrollButton.classList.add('visible');
+                } else {
+                    scrollButton.classList.remove('visible');
+                }
+            });
+
+            scrollButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html> 

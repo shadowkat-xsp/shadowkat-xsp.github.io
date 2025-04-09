@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XSP Alignment Helper - UTC Converter</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header-section">
+            <h1><a href="index.html" style="text-decoration: none; color: inherit;">XSP Alignment Helper</a></h1>
+            <div class="view-switcher">
+                <a href="index.html" class="view-link">Bidder View</a>
+                <a href="publisher.html" class="view-link">Publisher View</a>
+                <a href="endpoint.html" class="view-link">Endpoint View</a>
+                <a href="opportunities.html" class="view-link">Opportunities</a>
+                <div class="dropdown">
+                    <a href="#" class="view-link active">Mike's Tools</a>
+                    <div class="dropdown-content">
+                        <a href="json-format.html">Bid Request Formatter</a>
+                        <a href="app-ads-compliance.html">App-Ads Compliance</a>
+                        <a href="md5-converter.html">MD5 Converter</a>
+                        <a href="utc-converter.html">UTC Converter</a>
+                        <a href="json-to-csv.html">JSON to CSV</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2>UTC Time Converter</h2>
+        
+        <div class="tool-container">
+            <div class="tab-container">
+                <div class="tab-buttons">
+                    <button id="toUtcTab" class="tab-button active">Local → UTC</button>
+                    <button id="utcToUnixTab" class="tab-button">UTC → Unix</button>
+                    <button id="fromUnixTab" class="tab-button">Unix → Local/UTC</button>
+                </div>
+                
+                <!-- To UTC Conversion Tab (Local to UTC) -->
+                <div id="toUtcContent" class="tab-content active">
+                    <h3>Convert Local Time to UTC</h3>
+                    <div class="input-section">
+                        <div class="input-row">
+                            <label for="localDate">Date:</label>
+                            <input type="date" id="localDate">
+                        </div>
+                        <div class="input-row">
+                            <label for="localTime">Time:</label>
+                            <input type="time" id="localTime" step="1">
+                        </div>
+                        <div class="input-row">
+                            <label for="localTimezone">Timezone:</label>
+                            <select id="localTimezone">
+                                <!-- Common timezones will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="button-row">
+                            <button id="convertToUtcBtn" class="button">Convert to UTC</button>
+                            <button id="useCurrentLocalTimeBtn" class="button secondary">Use Current Time</button>
+                        </div>
+                    </div>
+                    <div class="output-section">
+                        <h4>Results</h4>
+                        <div class="result-row">
+                            <label>UTC Time:</label>
+                            <div class="result-container">
+                                <input type="text" id="utcResult" readonly>
+                                <button id="copyUtcBtn" class="button copy-btn">Copy</button>
+                            </div>
+                        </div>
+                        <div class="result-row">
+                            <label>Unix Timestamp (ms):</label>
+                            <div class="result-container">
+                                <input type="text" id="unixMsResult" readonly>
+                                <button id="copyUnixMsBtn" class="button copy-btn">Copy</button>
+                            </div>
+                        </div>
+                        <div class="result-row">
+                            <label>Unix Timestamp (sec):</label>
+                            <div class="result-container">
+                                <input type="text" id="unixSecResult" readonly>
+                                <button id="copyUnixSecBtn" class="button copy-btn">Copy</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- UTC to Unix Timestamp Tab -->
+                <div id="utcToUnixContent" class="tab-content">
+                    <h3>Convert UTC Time to Unix Timestamp</h3>
+                    <div class="input-section">
+                        <div class="input-row">
+                            <label for="utcInputDate">UTC Date:</label>
+                            <input type="date" id="utcInputDate">
+                        </div>
+                        <div class="input-row">
+                            <label for="utcInputTime">UTC Time:</label>
+                            <input type="time" id="utcInputTime" step="1">
+                        </div>
+                        <div class="button-row">
+                            <button id="convertUtcToUnixBtn" class="button">Convert to Unix Timestamp</button>
+                            <button id="useCurrentUtcBtn" class="button secondary">Use Current UTC</button>
+                        </div>
+                    </div>
+                    <div class="output-section">
+                        <h4>Results</h4>
+                        <div class="result-row">
+                            <label>Unix Timestamp (ms):</label>
+                            <div class="result-container">
+                                <input type="text" id="utcToUnixMsResult" readonly>
+                                <button id="copyUtcToUnixMsBtn" class="button copy-btn">Copy</button>
+                            </div>
+                        </div>
+                        <div class="result-row">
+                            <label>Unix Timestamp (sec):</label>
+                            <div class="result-container">
+                                <input type="text" id="utcToUnixSecResult" readonly>
+                                <button id="copyUtcToUnixSecBtn" class="button copy-btn">Copy</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- From Unix Timestamp Conversion Tab -->
+                <div id="fromUnixContent" class="tab-content">
+                    <h3>Convert Unix Timestamp to Local and UTC Time</h3>
+                    <div class="input-section">
+                        <div class="input-row">
+                            <label for="unixTimestamp">Unix Timestamp:</label>
+                            <input type="text" id="unixTimestamp" placeholder="Paste timestamp here (ms or sec)..." style="width: 100%;">
+                        </div>
+                        <div id="detectedFormat" style="margin-top: 5px; font-size: 12px; color: #666; font-style: italic;">
+                            Auto-detecting format...
+                        </div>
+                        
+                        <div class="input-row" style="margin-top: 20px;">
+                            <label for="targetTimezone">Target Timezone:</label>
+                            <select id="targetTimezone">
+                                <!-- Common timezones will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        
+                        <div class="button-row">
+                            <button id="convertFromUnixBtn" class="button">Convert to Local Time</button>
+                            <button id="useCurrentTimestampBtn" class="button secondary">Use Current Time</button>
+                        </div>
+                    </div>
+                    
+                    <div class="output-section">
+                        <h4>Results</h4>
+                        <div class="result-row">
+                            <label>Local Time:</label>
+                            <div class="result-container">
+                                <input type="text" id="localResult" readonly>
+                                <button id="copyLocalBtn" class="button copy-btn">Copy</button>
+                            </div>
+                        </div>
+                        <div class="result-row">
+                            <label>UTC Time:</label>
+                            <div class="result-container">
+                                <input type="text" id="utcFromUnixResult" readonly>
+                                <button id="copyUtcFromUnixBtn" class="button copy-btn">Copy</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a href="#" class="scroll-top" id="scrollTop">↑</a>
+
+    <script>
+        // Common timezones for dropdown
+        const timezones = [
+            { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
+            { value: 'America/New_York', label: 'America/New_York (EST/EDT, -5:00/-4:00)' },
+            { value: 'America/Chicago', label: 'America/Chicago (CST/CDT, -6:00/-5:00)' },
+            { value: 'America/Denver', label: 'America/Denver (MST/MDT, -7:00/-6:00)' },
+            { value: 'America/Los_Angeles', label: 'America/Los_Angeles (PST/PDT, -8:00/-7:00)' },
+            { value: 'America/Anchorage', label: 'America/Anchorage (AKST/AKDT, -9:00/-8:00)' },
+            { value: 'America/Honolulu', label: 'America/Honolulu (HST, -10:00)' },
+            { value: 'Europe/London', label: 'Europe/London (GMT/BST, +0:00/+1:00)' },
+            { value: 'Europe/Paris', label: 'Europe/Paris (CET/CEST, +1:00/+2:00)' },
+            { value: 'Europe/Berlin', label: 'Europe/Berlin (CET/CEST, +1:00/+2:00)' },
+            { value: 'Europe/Moscow', label: 'Europe/Moscow (MSK, +3:00)' },
+            { value: 'Asia/Tokyo', label: 'Asia/Tokyo (JST, +9:00)' },
+            { value: 'Asia/Shanghai', label: 'Asia/Shanghai (CST, +8:00)' },
+            { value: 'Asia/Singapore', label: 'Asia/Singapore (SGT, +8:00)' },
+            { value: 'Australia/Sydney', label: 'Australia/Sydney (AEST/AEDT, +10:00/+11:00)' },
+            { value: 'Pacific/Auckland', label: 'Pacific/Auckland (NZST/NZDT, +12:00/+13:00)' }
+        ];
+        
+        // Populate timezone dropdowns
+        function populateTimezones() {
+            const localTimezone = document.getElementById('localTimezone');
+            const targetTimezone = document.getElementById('targetTimezone');
+            
+            // Clear existing options
+            localTimezone.innerHTML = '';
+            targetTimezone.innerHTML = '';
+            
+            // Get local timezone
+            const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            
+            // Add options
+            timezones.forEach(tz => {
+                const localOption = document.createElement('option');
+                localOption.value = tz.value;
+                localOption.textContent = tz.label;
+                if (tz.value === localTz) {
+                    localOption.selected = true;
+                }
+                localTimezone.appendChild(localOption);
+                
+                const targetOption = document.createElement('option');
+                targetOption.value = tz.value;
+                targetOption.textContent = tz.label;
+                if (tz.value === localTz) {
+                    targetOption.selected = true;
+                }
+                targetTimezone.appendChild(targetOption);
+            });
+        }
+        
+        // Tab switching logic
+        document.getElementById('toUtcTab').addEventListener('click', function() {
+            document.getElementById('toUtcTab').classList.add('active');
+            document.getElementById('utcToUnixTab').classList.remove('active');
+            document.getElementById('fromUnixTab').classList.remove('active');
+            document.getElementById('toUtcContent').classList.add('active');
+            document.getElementById('utcToUnixContent').classList.remove('active');
+            document.getElementById('fromUnixContent').classList.remove('active');
+        });
+        
+        document.getElementById('utcToUnixTab').addEventListener('click', function() {
+            document.getElementById('toUtcTab').classList.remove('active');
+            document.getElementById('utcToUnixTab').classList.add('active');
+            document.getElementById('fromUnixTab').classList.remove('active');
+            document.getElementById('toUtcContent').classList.remove('active');
+            document.getElementById('utcToUnixContent').classList.add('active');
+            document.getElementById('fromUnixContent').classList.remove('active');
+        });
+        
+        document.getElementById('fromUnixTab').addEventListener('click', function() {
+            document.getElementById('toUtcTab').classList.remove('active');
+            document.getElementById('utcToUnixTab').classList.remove('active');
+            document.getElementById('fromUnixTab').classList.add('active');
+            document.getElementById('toUtcContent').classList.remove('active');
+            document.getElementById('utcToUnixContent').classList.remove('active');
+            document.getElementById('fromUnixContent').classList.add('active');
+        });
+        
+        // Format a date object to ISO string with timezone
+        function formatDateToISOWithTZ(date, timezone) {
+            return date.toLocaleString('en-US', {
+                timeZone: timezone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            }).replace(/(\d+)\/(\d+)\/(\d+),\s+/, '$3-$1-$2T');
+        }
+        
+        // Convert local time to UTC
+        document.getElementById('convertToUtcBtn').addEventListener('click', function() {
+            const localDate = document.getElementById('localDate').value;
+            const localTime = document.getElementById('localTime').value;
+            const timezone = document.getElementById('localTimezone').value;
+            
+            if (!localDate || !localTime) {
+                alert('Please enter both date and time');
+                return;
+            }
+            
+            try {
+                // Create date object with local date and time
+                const dateTimeStr = `${localDate}T${localTime}`;
+                const localDateTime = new Date(dateTimeStr);
+                
+                // Get the timezone offset for the selected timezone
+                const formatter = new Intl.DateTimeFormat('en-US', {
+                    timeZone: timezone,
+                    year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: 'numeric',
+                    second: 'numeric',
+                    hour12: false
+                });
+                
+                // Format the date according to the selected timezone
+                const parts = formatter.formatToParts(localDateTime);
+                const dateObj = {};
+                parts.forEach(part => {
+                    if (part.type !== 'literal') {
+                        dateObj[part.type] = part.value;
+                    }
+                });
+                
+                // Create a new date in the specified timezone
+                const adjustedDate = new Date(
+                    Date.UTC(
+                        parseInt(dateObj.year),
+                        parseInt(dateObj.month) - 1,
+                        parseInt(dateObj.day),
+                        parseInt(dateObj.hour),
+                        parseInt(dateObj.minute),
+                        parseInt(dateObj.second)
+                    )
+                );
+                
+                // Get UTC timestamp
+                const timestamp = adjustedDate.getTime();
+                
+                // Display results
+                document.getElementById('utcResult').value = new Date(timestamp).toISOString();
+                document.getElementById('unixMsResult').value = timestamp.toString(); // 13 digits
+                document.getElementById('unixSecResult').value = Math.floor(timestamp / 1000).toString(); // 10 digits
+            } catch (error) {
+                alert('Error converting time: ' + error.message);
+            }
+        });
+        
+        // Use current local time
+        document.getElementById('useCurrentLocalTimeBtn').addEventListener('click', function() {
+            const now = new Date();
+            
+            // Format date as YYYY-MM-DD for input
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            document.getElementById('localDate').value = `${year}-${month}-${day}`;
+            
+            // Format time as HH:MM:SS for input
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('localTime').value = `${hours}:${minutes}:${seconds}`;
+            
+            // Trigger conversion
+            document.getElementById('convertToUtcBtn').click();
+        });
+        
+        // Convert from Unix timestamp
+        document.getElementById('convertFromUnixBtn').addEventListener('click', function() {
+            const targetTimezone = document.getElementById('targetTimezone').value;
+            const timestampStr = document.getElementById('unixTimestamp').value.trim();
+            
+            if (!timestampStr) {
+                alert('Please enter a timestamp');
+                return;
+            }
+            
+            try {
+                // Parse the timestamp value
+                let timestamp = Number(timestampStr);
+                
+                if (isNaN(timestamp)) {
+                    alert('Please enter a valid numeric timestamp');
+                    return;
+                }
+                
+                // Auto-detect if it's seconds or milliseconds based on length
+                // Timestamps before Jan 1, 2001 in milliseconds have 13 digits
+                // Current timestamp in seconds has 10 digits
+                if (timestamp < 20000000000) { // If less than 20 billion, it's likely seconds
+                    timestamp *= 1000; // Convert to milliseconds
+                }
+                
+                // Create Date objects
+                const utcDate = new Date(timestamp);
+                
+                // Check if the date is valid
+                if (utcDate.toString() === 'Invalid Date') {
+                    alert('Invalid timestamp: resulting date is invalid');
+                    return;
+                }
+                
+                // Format UTC time
+                const utcTimeStr = utcDate.toISOString();
+                
+                // Convert to target timezone
+                const targetDateString = utcDate.toLocaleString('en-US', {
+                    timeZone: targetTimezone,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+                
+                // Display results
+                document.getElementById('localResult').value = targetDateString;
+                document.getElementById('utcFromUnixResult').value = utcTimeStr;
+            } catch (error) {
+                alert('Error converting timestamp: ' + error.message);
+            }
+        });
+        
+        // Use current timestamp (always use milliseconds for consistency)
+        document.getElementById('useCurrentTimestampBtn').addEventListener('click', function() {
+            const now = new Date();
+            const timestamp = now.getTime();
+            document.getElementById('unixTimestamp').value = timestamp;
+            
+            // Update detected format
+            document.getElementById('detectedFormat').textContent = 'Detected: milliseconds format (13 digits)';
+            
+            // Trigger conversion
+            document.getElementById('convertFromUnixBtn').click();
+        });
+        
+        // Convert UTC to Unix timestamp
+        document.getElementById('convertUtcToUnixBtn').addEventListener('click', function() {
+            const utcDate = document.getElementById('utcInputDate').value;
+            const utcTime = document.getElementById('utcInputTime').value;
+            
+            if (!utcDate || !utcTime) {
+                alert('Please enter both date and time');
+                return;
+            }
+            
+            try {
+                // Create date object from UTC date and time
+                const timestamp = new Date(`${utcDate}T${utcTime}Z`).getTime();
+                
+                // Display results
+                document.getElementById('utcToUnixMsResult').value = timestamp.toString(); // 13 digits
+                document.getElementById('utcToUnixSecResult').value = Math.floor(timestamp / 1000).toString(); // 10 digits
+            } catch (error) {
+                alert('Error converting time: ' + error.message);
+            }
+        });
+        
+        // Use current UTC time
+        document.getElementById('useCurrentUtcBtn').addEventListener('click', function() {
+            const now = new Date();
+            
+            // Set the UTC date input
+            const year = now.getUTCFullYear();
+            const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(now.getUTCDate()).padStart(2, '0');
+            document.getElementById('utcInputDate').value = `${year}-${month}-${day}`;
+            
+            // Set the UTC time input
+            const hours = String(now.getUTCHours()).padStart(2, '0');
+            const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+            const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+            document.getElementById('utcInputTime').value = `${hours}:${minutes}:${seconds}`;
+            
+            // Trigger conversion
+            document.getElementById('convertUtcToUnixBtn').click();
+        });
+        
+        // Copy button functionality
+        function setupCopyButton(buttonId, inputId) {
+            document.getElementById(buttonId).addEventListener('click', function() {
+                const input = document.getElementById(inputId);
+                if (!input.value) {
+                    alert('No value to copy');
+                    return;
+                }
+                
+                input.select();
+                document.execCommand('copy');
+                
+                // Show temporary success indicator
+                const copyBtn = this;
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = 'Copied!';
+                copyBtn.classList.add('success');
+                
+                setTimeout(function() {
+                    copyBtn.textContent = originalText;
+                    copyBtn.classList.remove('success');
+                }, 1500);
+            });
+        }
+        
+        // Setup all copy buttons
+        setupCopyButton('copyUtcBtn', 'utcResult');
+        setupCopyButton('copyUnixMsBtn', 'unixMsResult');
+        setupCopyButton('copyUnixSecBtn', 'unixSecResult');
+        setupCopyButton('copyUtcToUnixMsBtn', 'utcToUnixMsResult');
+        setupCopyButton('copyUtcToUnixSecBtn', 'utcToUnixSecResult');
+        setupCopyButton('copyLocalBtn', 'localResult');
+        setupCopyButton('copyUtcFromUnixBtn', 'utcFromUnixResult');
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Populate timezone dropdowns
+            populateTimezones();
+            
+            // Set default dates
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            
+            document.getElementById('localDate').value = `${year}-${month}-${day}`;
+            
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            document.getElementById('localTime').value = `${hours}:${minutes}:${seconds}`;
+            
+            // Set default UTC dates
+            const utcYear = now.getUTCFullYear();
+            const utcMonth = String(now.getUTCMonth() + 1).padStart(2, '0');
+            const utcDay = String(now.getUTCDate()).padStart(2, '0');
+            document.getElementById('utcInputDate').value = `${utcYear}-${utcMonth}-${utcDay}`;
+            
+            // Set default UTC time
+            const utcHours = String(now.getUTCHours()).padStart(2, '0');
+            const utcMinutes = String(now.getUTCMinutes()).padStart(2, '0');
+            const utcSeconds = String(now.getUTCSeconds()).padStart(2, '0');
+            document.getElementById('utcInputTime').value = `${utcHours}:${utcMinutes}:${utcSeconds}`;
+            
+            // Setup scroll-to-top functionality
+            const scrollButton = document.getElementById('scrollTop');
+            
+            window.addEventListener('scroll', function() {
+                if (window.pageYOffset > 300) {
+                    scrollButton.classList.add('visible');
+                } else {
+                    scrollButton.classList.remove('visible');
+                }
+            });
+
+            scrollButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            // Add event listener for Enter key on timestamp input
+            document.getElementById('unixTimestamp').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    document.getElementById('convertFromUnixBtn').click();
+                }
+            });
+
+            // Auto-detect timestamp format and update indicator
+            document.getElementById('unixTimestamp').addEventListener('input', function() {
+                const value = this.value.trim();
+                const detectedFormatElement = document.getElementById('detectedFormat');
+                
+                if (!value) {
+                    detectedFormatElement.textContent = 'Auto-detecting format...';
+                    return;
+                }
+                
+                // Try to parse as number
+                const timestamp = Number(value);
+                if (isNaN(timestamp)) {
+                    detectedFormatElement.textContent = 'Invalid numeric format';
+                    return;
+                }
+                
+                if (timestamp < 20000000000) {
+                    detectedFormatElement.textContent = 'Detected: seconds format (10 digits)';
+                } else {
+                    detectedFormatElement.textContent = 'Detected: milliseconds format (13 digits)';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
