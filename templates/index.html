@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Dispatcher</title>
+    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+</head>
+<body>
+    <header>
+        <h1>Flight Dispatcher</h1>
+        <p>Find your next flight route.</p>
+    </header>
+    <main>
+        <form id="route-finder-form">
+            <p>
+                <label for="airline">Airline (IATA Code):</label>
+                <input type="text" id="airline" name="airline" placeholder="e.g., UAL" required>
+            </p>
+            <p>
+                <label for="aircraft">Aircraft (ICAO Code):</label>
+                <input type="text" id="aircraft" name="aircraft" placeholder="e.g., B738">
+            </p>
+            <p>
+                <label for="flight_time">Desired Flight Time (hours):</label>
+                <input type="number" id="flight_time" name="flight_time" placeholder="e.g., 3" step="0.5">
+            </p>
+            <button type="submit">Find Routes</button>
+        </form>
+
+        <div id="results">
+            <h2>Suggested Routes</h2>
+            <div id="routes-list">
+                <!-- Flight routes will be displayed here -->
+            </div>
+        </div>
+
+        <form id="sbapiform" target="simbrief_window" method="POST" action="https://www.simbrief.com/ofp/dispatch.php">
+            <input type="hidden" name="orig" value="">
+            <input type="hidden" name="dest" value="">
+            <input type="hidden" name="airline" value="">
+            <input type="hidden" name="fltnum" value="">
+            <input type="hidden"name="type" value="">
+            <!-- Add any other SimBrief params as hidden inputs if needed -->
+        </form>
+    </main>
+    <footer>
+        <p>Powered by FlightRadar24 and SimBrief APIs</p>
+    </footer>
+    <script src="{{ url_for('static', filename='simbrief.apiv1.js') }}"></script>
+    <script>
+        document.getElementById('route-finder-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const form = event.target;
+            const data = {
+                airline: form.airline.value,
+                aircraft: form.aircraft.value,
+                flight_time: form.flight_time.value
+            };
+            const routesList = document.getElementById('routes-list');
+            routesList.innerHTML = '<p>Searching for flights...</p>';
+
+            fetch('/find-routes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(flights => {
+                routesList.innerHTML = '';
+                if (flights.error) {
+                    routesList.innerHTML = `<p>Error: ${flights.error}</p>`;
+                    return;
+                }
+                if (flights.length === 0) {
+                    routesList.innerHTML = '<p>No matching flights found.</p>';
+                    return;
+                }
+                const table = document.createElement('table');
+                table.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th>Callsign</th>
+                            <th>Origin</th>
+                            <th>Destination</th>
+                            <th>Aircraft</th>
+                            <th>Flight Time</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>`;
+                const tbody = table.querySelector('tbody');
+                flights.forEach(flight => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${flight.callsign}</td>
+                        <td>${flight.origin}</td>
+                        <td>${flight.destination}</td>
+                        <td>${flight.aircraft}</td>
+                        <td>${flight.flight_time}</td>
+                        <td><button class="simbrief-btn" data-origin="${flight.origin}" data-destination="${flight.destination}" data-aircraft="${flight.aircraft}">Generate with SimBrief</button></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                routesList.appendChild(table);
+            })
+            .catch(error => {
+                routesList.innerHTML = `<p>An error occurred: ${error.message}</p>`;
+            });
+        });
+
+        document.getElementById('routes-list').addEventListener('click', function(event) {
+            if (event.target.classList.contains('simbrief-btn')) {
+                const button = event.target;
+                const origin = button.getAttribute('data-origin');
+                const destination = button.getAttribute('data-destination');
+                const aircraft = button.getAttribute('data-aircraft');
+
+                const form = document.getElementById('sbapiform');
+                form.querySelector('input[name="orig"]').value = origin;
+                form.querySelector('input[name="dest"]').value = destination;
+                form.querySelector('input[name="type"]').value = aircraft;
+                form.querySelector('input[name="airline"]').value = document.getElementById('airline').value;
+                form.querySelector('input[name="fltnum"]').value = Math.floor(Math.random() * 9000) + 1000; // Random flight number
+
+                // The simbrief.apiv1.js from Simbrief is required for this to work
+                if (typeof simbriefsubmit === 'function') {
+                    // The first parameter is the URL to redirect to after generation.
+                    simbriefsubmit(window.location.origin + '/briefing');
+                } else {
+                    alert('Simbrief API script not loaded. Please ensure you have simbrief.apiv1.js from Simbrief.');
+                    // As a fallback, we can submit the form directly, which will navigate the user away.
+                    // form.submit(); 
+                }
+            }
+        });
+    </script>
+</body>
+</html> 
